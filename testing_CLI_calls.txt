@@ -1,0 +1,154 @@
+
+#===========================================
+$> python create_cloudless.py
+
+Usage: create_cloudless.py  [-d|--dataset] <dataset>  [-a|--aoi] <'minx,maxx,miny,maxy'>  [-t|--time] <startdate> 
+                  ([-s|--scenario] <T|M|B>)  ([-e|--extract] <full|sub>) ([-p|--period] <num days>)
+  Tool to generate cloudless products over a period of X-days from the existing products. The processing ends after X-days
+  or when no more clouds are present.
+  REQUIRED parameters: 
+   -d|--dataset <dataset>    --  Dataset to be used e.g. SPOT4Take5 
+   -a|--aoi <'maxx,minx,maxy,miny'>  --  the Area of Interest (AOI), with the coordinates of the BoundingBox, provided as
+                                          the corner coordinates in Degrees (WGS84, Lat/Lon)
+   -t|--time <stardate>      --  Starttime - Date of the image to start with in ISO-Format e.g. '20120423' 
+  OPTIONAL parameters: 
+   -s|--scenario  <T|M|B>    --  Scenario type: a) input Dataset is topmost-layer (T), filling in clouded areas with pixels
+                                                   from older images [=default]
+                                                b) input Dataset is middle (M), alternating newer and older images
+                                                c) input Dataset acts as bottom-layer (B), filling in clouded areas with pixels
+                                                   from newer images
+                                 [default=SUB]
+   -p|--period  <num days>   --  time period (number of days/images) to run the cloudless processing [optional, default=7]
+                                 a period of 10 days/images will usually be sufficient to achieve a good result.
+   -b|--bands <'b1,b2,..bn'> --  list of bands to be processed e.g. '3,2,1'  [default = all bands] 
+   -o|--output_dir           --  location to store the output/results (needed only for CLI usage) 
+
+Example: create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s T -b 3,2,1 -p 90 
+
+#===========================================
+
+
+#
+# some (example) calls on the cmd-line to test the create_cloudless.py from the CLI interface
+#
+
+# workig/program directory is:  /home/schillerc/cs_pylib/spot4take5
+
+# spot4take5 (local)
+./create_cloudless.py -d  spot4take5_f -a 12,15,45,48 -t 20130520 -s T -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
+./create_cloudless.py -d  spot4take5_f -a 12,15,45,48 -t 20110513 -s T -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
+
+
+
+
+
+#landsat5 (local)
+./create_cloudless.py -d  landsat5_f -a 22,44,66,99 -t 20110529 -s T -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
+./create_cloudless.py -a 22,44,66,99 -t 20110529 -d landsat5_f -p 15
+./create_cloudless.py -a 22,44,66,99 -t 20110529 -d landsat5_m
+
+
+
+
+
+
+#cryoland (wcs)
+./create_cloudless.py -d cryoland -a 12,15,45,48 -t 20130520 -s T -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
+./create_cloudless.py -d cryoland -a 12,15,45,48 -t 20130520 -s B -p 15 -o /home/schillerc/cs_pylib/spot4take5/tmp
+./create_cloudless.py -d cryoland -a 12,15,45,48 -t 20130520 -s M -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
+
+ipython --deep-reload -i
+%run /home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d cryoland -a 12,15,45,48 -t 20130520 -s T -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
+
+
+
+# from cmd-line
+
+# full bandset, larger, 30days, T
+/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 3.2,3.7,43.1,43.6 -t 20110513 -s T -p 30 -o /home/schillerc/cs_pylib/spot4take5/tmp
+
+
+/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 2,3,43,44 -t 20110520 -s T -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
+
+# band subsetting (321 bzw. 123), 60days (T/B/M)
+/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s T -p 60 -o /home/schillerc/cs_pylib/spot4take5/tmp -b 3,2,1
+
+/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s B -p 60 -o /home/schillerc/cs_pylib/spot4take5/tmp -b 3,2,1
+
+/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s M -p 60 -o /home/schillerc/cs_pylib/spot4take5/tmp -b 3,2,1
+
+
+
+## Spot4Take5 
+Dataset:  spot4take5_n2a_pente / spot4take5_n2a_nua
+
+Gulf of Lyon: 
+Coord: 3.5,3.6,43.3,43.4
+/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a 3.5,3.6,43.3,43.4 -t 20130227 -s T -p 30 -o /home/schillerc/cs_pylib/spot4take5/tmp_spot 
+
+Brussel:
+Coord:  4.76,5.10,50.52,50.78
+/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a 4.76,5.10,50.52,50.78 -s T 20130616 -p 30 -o /home/schillerc/cs_pylib/spot4take5/tmp_spot
+
+
+Bretagne:  --> this dataset causes problems due to some input-files result in differernt sized output by WCS !!!
+Coord: -2.8,47.5,-2.6,47.7
+/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a -2.7,-2.6,47.6,47.7 -t 20130211 -s T -p 60 -o /home/schillerc/cs_pylib/spot4take5/tmp_spot 
+
+/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a -2.7,-2.6,47.6,47.7 -t 20130211 -s B -p 60 -o /home/schillerc/cs_pylib/spot4take5/tmp_spot 
+
+
+
+
+-----
+Delta-DREAM WCS:
+
+curl "http://data.eox.at/instance00/ows?service=wcs&version=2.0.0&request=GetCapabilities&sections=DatasetSeriesSummary" |xmllint --format --output  oda_getcap1.xml -
+
+Available Dataset Series:
+
+Landsat_RGB_view = http://data.eox.at/instance00/ows/?
+Landsat5_RGB_view = http://data.eox.at/instance00/ows/?
+Landsat7_RGB_view = http://data.eox.at/instance00/ows/?
+Spot4Take5_N1C_RGB_view = http://data.eox.at/instance00/ows/?
+Spot4Take5_N2A_RGB_view = http://data.eox.at/instance00/ows/?
+GISAT_SimS2_RGB_view = http://data.eox.at/instance00/ows/?
+GISAT_SimS2_RGB_ValidNoCloud_view = http://data.eox.at/instance00/ows/?
+
+
+Landsat_2A = http://data.eox.at/instance00/ows/?
+Landsat_Mask_Clouds = http://data.eox.at/instance00/ows/?
+Landsat_Mask_Saturation = http://data.eox.at/instance00/ows/?
+Landsat_Mask_WaterAndSnow = http://data.eox.at/instance00/ows/?
+
+
+Landsat5_2A = http://data.eox.at/instance00/ows/?
+Landsat5_Mask_Clouds = http://data.eox.at/instance00/ows/?
+Landsat5_Mask_Saturation = http://data.eox.at/instance00/ows/?
+Landsat5_Mask_WaterAndSnow = http://data.eox.at/instance00/ows/?
+
+
+Landsat7_2A = http://data.eox.at/instance00/ows/?
+Landsat7_Mask_Clouds = http://data.eox.at/instance00/ows/?
+Landsat7_Mask_Saturation = http://data.eox.at/instance00/ows/?
+Landsat7_Mask_WaterAndSnow = http://data.eox.at/instance00/ows/?
+
+
+GISAT_SimS2 = http://data.eox.at/instance00/ows/?
+GISAT_SimS2_Clouds = http://data.eox.at/instance00/ows/?
+
+
+Spot4Take5_N1C = http://data.eox.at/instance00/ows/?
+Spot4Take5_N1C_SAT = http://data.eox.at/instance00/ows/?
+
+
+Spot4Take5_N2A_PENTE = http://data.eox.at/instance00/ows/?
+Spot4Take5_N2A_NUA = http://data.eox.at/instance00/ows/?
+Spot4Take5_N2A_ENV = http://data.eox.at/instance00/ows/?
+Spot4Take5_N2A_SAT = http://data.eox.at/instance00/ows/?
+Spot4Take5_N2A_DIV = http://data.eox.at/instance00/ows/?
+Spot4Take5_N2A_AOT = http://data.eox.at/instance00/ows/?
+
+
+
+
