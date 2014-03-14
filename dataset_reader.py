@@ -227,26 +227,20 @@ class Reader(object):
     xml_date_tag = ['gml:beginPosition',  'gml:endPosition']
 
 #---------
+#    def fopen(self, filename):
+#        return gdal.OpenShared(filename, GA_ReadOnly)
+### TODO: check - is this needed? 
+# 
+#---------
+#    def fopen_mask(self, filename):
+#        """ This is an interface method to open the mask file as a gdal
+#            dataset for the given data filename.
+#        """
+### TODO: check - is this needed? 
+#
+#---------
     def __init__(self):
         pass
-
-#---------
-    def fopen(self, filename):
-        return gdal.OpenShared(filename, GA_ReadOnly)
-
-#---------
-    def fopen_mask(self, filename):
-        """ This is an interface method to open the mask file as a gdal
-            dataset for the given data filename.
-        """
-## TODO: check - is this needed? 
-
-#---------
-    def receive_data(self, file_list, input_params, settings, temp_storage, mask):
-        """
-            proxy function
-        """
-        self.base_getcover(file_list, input_params, settings, temp_storage, mask)
 
 #---------
     def get_filelist(self, input_params, settings):
@@ -306,6 +300,15 @@ class Reader(object):
 
         return  base_flist, base_mask_flist, gfp_flist, gfpmask_flist
 
+#---------
+
+    def get_maskname(self, filename):
+        """
+            set the mask filename filter and get the mask filename(-list)
+            return mask-filename or list of mask-filenames (if list is provided)
+        *) eg. CryoLand doesn't have mask files
+        """
+        pass
 
 #---------
     def set_request_values(self, settings, input_params, mask):
@@ -549,6 +552,78 @@ class Reader(object):
         except TypeError:
             pass
 
+#---------
+    def base_getcover_single(self, COVERAGEID, input_params, settings, temp_storage, mask):
+        """
+            Function to actually requesting and saving the available coverages on the local file system.
+        """
+        wcs_ext = '.tif'
+        base_getcov = set_base_getcov()
+        service1, toi_values, aoi_values, dss = self.set_request_values(settings, input_params, mask=False)
+
+            # create output-crs syntax to be added to GetCoverage request
+        if input_params['output_crs'] != None:
+#            output_crs = "&outputcrs="+input_params['output_crs']
+            output_crs = base_getcov[9]+input_params['output_crs']
+        else:
+            output_crs = ''
+
+            # handle band-subsetting
+        if input_params['bands'] != '999':
+            bands = ''
+            for bb in input_params['bands']:
+                bands = bands+bb+','
+                rangesubset = base_getcov[8]+bands[:-1]
+        else:
+            rangesubset = ''
+
+            # don't use bandsubsetting for requests regarding mask-files
+        if mask is True:
+            rangesubset = ''
+
+        try:
+                # donwload a single coverage (product or mask)
+            request_url_getcov = service1+base_getcov[0]+base_getcov[1]+base_getcov[2]+base_getcov[3]+COVERAGEID+ \
+                base_getcov[4]+base_getcov[5]+aoi_values[0]+','+aoi_values[1]+base_getcov[6]+aoi_values[2]+','+aoi_values[3]+ \
+                base_getcov[7]+output_crs+rangesubset
+
+            print request_url_getcov
+                # open and access the url
+
+            try:
+                res_getcov = urllib2.urlopen(request_url_getcov)
+
+                if COVERAGEID.endswith(('.tif')):
+                    outfile = COVERAGEID
+                elif COVERAGEID.endswith(('.TIF','.Tif')):
+                    outfile = COVERAGEID[:-4]+wcs_ext
+                elif COVERAGEID.endswith(('.tiff','.Tiff','.TIFF')):
+                    outfile = COVERAGEID[:-5]+wcs_ext
+                else:
+                    outfile = COVERAGEID+wcs_ext
+
+                #print temp_storage
+                #print outfile
+                file_getcov = open(temp_storage+outfile, 'w+b')
+                file_getcov.write(res_getcov.read())
+                file_getcov.flush()
+                os.fsync(file_getcov.fileno())
+                file_getcov.close()
+                res_getcov.close()
+
+            except IOError as (errno, strerror):
+                print "I/O error({0}): {1}".format(errno, strerror)
+            except:
+                print "Unexpected error:", sys.exc_info()[0]
+                raise
+
+        except urllib2.URLError, url_ERROR:
+            if hasattr(url_ERROR, 'reason'):
+                print  time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  Server not accessible -", url_ERROR.reason
+            elif hasattr(url_ERROR, 'code'):
+                print time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  The server couldn\'t fulfill the request - Code returned:  ", url_ERROR.code,  url_ERROR.read()
+        except TypeError:
+            pass
 
 
 #---------
@@ -606,6 +681,8 @@ class CF_landsat5_2a_Reader(Reader):
         - mainly for testing and development
         - and for demonstration of WCS usage
     """
+    def __init__(self):
+        Reader.__init__(self)
 
 #            # get the available dss - maybe make a check if user provided dss really exists
 #        avail_dss = self.get_available_dss(input_params, settings)
@@ -615,15 +692,15 @@ class CF_landsat5_2a_Reader(Reader):
 #            err_msg = 'DSS not available: ', input_params['dataset']
 #            handle_error(err_msg, 4)
 
-#---------
-
-    def get_maskname(self, filename):
-        """
-            set the mask filename filter and get the mask filename(-list)
-            return mask-filename or list of mask-filenames (if list is provided)
-        *) CryoLand doesn't have seperate mask files
-        """
-        pass
+##---------
+#
+#    def get_maskname(self, filename):
+#        """
+#            set the mask filename filter and get the mask filename(-list)
+#            return mask-filename or list of mask-filenames (if list is provided)
+#        *) CryoLand doesn't have seperate mask files
+#        """
+#        pass
 
 #---------
 
@@ -637,10 +714,12 @@ class CF_landsat5_2a_Reader(Reader):
 #/************************************************************************/
 class CF_spot4take5_n2a_pente_Reader(Reader):
     """
-        reader module for the cryoland dataset
+        reader module for the spot4take5_n2a_pentec dataset
         - mainly for testing and development
         - and for demonstration of WCS usage
     """
+    def __init__(self):
+        Reader.__init__(self)
 
 #            # get the available dss - maybe make a check if user provided dss really exists
 #        avail_dss = self.get_available_dss(input_params, settings)
@@ -650,15 +729,15 @@ class CF_spot4take5_n2a_pente_Reader(Reader):
 #            err_msg = 'DSS not available: ', input_params['dataset']
 #            handle_error(err_msg, 4)
 
-#---------
-
-    def get_maskname(self, filename):
-        """
-            set the mask filename filter and get the mask filename(-list)
-            return mask-filename or list of mask-filenames (if list is provided)
-        """
-        pass
-
+##---------
+#
+#    def get_maskname(self, filename):
+#        """
+#            set the mask filename filter and get the mask filename(-list)
+#            return mask-filename or list of mask-filenames (if list is provided)
+#        """
+#        pass
+#
 
 #---------
 
@@ -675,6 +754,8 @@ class CF_cryoland_Reader(Reader):
         - mainly for testing and development
         - and for demonstration of WCS usage
     """
+    def __init__(self):
+        Reader.__init__(self)
 
 #            # get the available dss - maybe make a check if user provided dss really exists
 #        avail_dss = self.get_available_dss(input_params, settings)
@@ -689,15 +770,15 @@ class CF_cryoland_Reader(Reader):
 #                err_msg = 'DSS not available: ', input_params['dataset']
 #                handle_error(err_msg, 4)
 
-#---------
-
-    def get_maskname(self, filename):
-        """
-            set the mask filename filter and get the mask filename(-list)
-            return mask-filename or list of mask-filenames (if list is provided)
-        *) CryoLand doesn't have seperate mask files
-        """
-        pass
+##---------
+#
+#    def get_maskname(self, filename):
+#        """
+#            set the mask filename filter and get the mask filename(-list)
+#            return mask-filename or list of mask-filenames (if list is provided)
+#        *) eg. CryoLand doesn't have mask files
+#        """
+#        pass
 
 #---------
 
@@ -743,13 +824,18 @@ class CF_cryoland_Reader(Reader):
 #/*                   CF_landsat_obj_test_Reader()                       */
 #/************************************************************************/
 ## TODO -- to be deleted
-class CF_landsat_obj_test_Reader(Reader):
-
-    def get_maskname(self, filename):
-        base, extension = os.path.splitext(filename)
-        mask_filename = "%s.nuages%s" % (base, extension)
-        return mask_filename
-        #return gdal.Open(mask_filename)
+#class CF_landsat_obj_test_Reader(Reader):
+#    """
+#        Landsat reader - testing .... --> to be deleted
+#    """
+#    def __init__(self):
+#        Reader.__init__(self)
+#
+#    def get_maskname(self, filename):
+#        base, extension = os.path.splitext(filename)
+#        mask_filename = "%s.nuages%s" % (base, extension)
+#        return mask_filename
+#        #return gdal.Open(mask_filename)
 
 
 
@@ -763,6 +849,8 @@ class CF_landsat5_f_Reader(Reader):
             '_f' = means located  at hard disk
             '_w' = means accessible via WCS service
     """
+    def __init__(self):
+        Reader.__init__(self)
 
 #----
     def get_maskname(self, filename):
@@ -865,6 +953,9 @@ class CF_spot4take5_f_Reader(Reader):
             '_f' = means located  at hard disk
             '_w' = means accessible via WCS service
     """
+    def __init__(self):
+        Reader.__init__(self)
+
 ## TODO -- need to add the time limitation for the resulting listings
 
     def get_maskname(self, filename):
@@ -928,15 +1019,17 @@ class CF_cryoland_local_Reader(Reader):
         - mainly for testing and development
         - and for demonstration of WCS usage
     """
+    def __init__(self):
+        Reader.__init__(self)
 
-
-    def get_maskname(self, filename):
-        """
-            set the mask filename filter and get the mask filename(-list)
-            return m ask-filename or list of mask-filenames (if list is provided)
-        """
-        pass
-
+#
+#    def get_maskname(self, filename):
+#        """
+#            set the mask filename filter and get the mask filename(-list)
+#            return mask-filename or list of mask-filenames (if list is provided)
+#        """
+#        pass
+#
 
     def get_filelist(self, input_params, settings):
         """
@@ -968,15 +1061,17 @@ class CF_landsat5_m_Reader(Reader):
             '_w' = means accessible via WCS service
             '_m' = means use of the "local-mixed" dataset
     """
+    def __init__(self):
+        Reader.__init__(self)
 
-    def get_maskname(self, filename):
-        """
-            set the mask filename filter and get the mask filename(-list)
-            return m ask-filename or list of mask-filenames (if list is provided)
-        """
-            # check if list or single name has been provided
-        #if type(filename) == list:
-        pass
+#    def get_maskname(self, filename):
+#        """
+#            set the mask filename filter and get the mask filename(-list)
+#            return m ask-filename or list of mask-filenames (if list is provided)
+#        """
+#            # check if list or single name has been provided
+#        #if type(filename) == list:
+#        pass
 
 
     def get_filelist(self, input_params, settings):

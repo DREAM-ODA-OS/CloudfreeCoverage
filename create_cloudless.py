@@ -478,29 +478,32 @@ def main():
         temp_storage = temp_storage+dsep
 
     if len(base_flist) >= 1:
-        f_read.receive_data(base_flist, input_params, settings, temp_storage, mask=False)
+        f_read.base_getcover(base_flist, input_params, settings, temp_storage, mask=False)
 
     if len(base_mask_flist) >= 1:
-        f_read.receive_data(base_mask_flist, input_params, settings, temp_storage, mask=True)
+        f_read.base_getcover(base_mask_flist, input_params, settings, temp_storage, mask=True)
 
-# @@ TODO - the downloads shall be made one after the other and shall be immediately processed,
-# so that once the baseImg is cloudfree no unnecessary downloads are made
-# i.e. change these to a download-process-download loop
-    if len(gfp_flist) >= 1:
-        f_read.receive_data(gfp_flist, input_params, settings, temp_storage, mask=False)
+    print 'BASE dataset_download - RUNTIME in sec: ',  time.time() - startTime1
 
-    if len(gfpmask_flist) >= 1:
-        f_read.receive_data(gfpmask_flist, input_params, settings, temp_storage, mask=True)
-
-
-    print 'dataset_download - RUNTIME in sec: ',  time.time() - startTime1
+#
+## @@ TODO - the downloads shall be made one after the other and shall be immediately processed,
+## so that once the baseImg is cloudfree no unnecessary downloads are made
+## i.e. change these to a download-process-download loop
+#    if len(gfp_flist) >= 1:
+#        f_read.base_getcover(gfp_flist, input_params, settings, temp_storage, mask=False)
+#
+#    if len(gfpmask_flist) >= 1:
+#        f_read.base_getcover(gfpmask_flist, input_params, settings, temp_storage, mask=True)
+#
+##    print 'dataset_download - RUNTIME in sec: ',  time.time() - startTime1
 
         # call the Processor module for the resepective dataset and process the data
     import dataset_processor
     cfprocessor = 'CF_' + input_params['dataset'] + '_Processor'
     attribute = getattr(dataset_processor, cfprocessor)
     f_proc = attribute()
-    cf_result = f_proc.process_clouds(base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage)
+    #cf_result = f_proc.process_clouds_1(base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage, f_read)
+    cf_result = f_proc.process_clouds_1(base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage, f_read)
 
 
 # @@ -- off during testing

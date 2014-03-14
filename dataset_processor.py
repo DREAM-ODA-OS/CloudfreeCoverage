@@ -194,7 +194,7 @@ class CFProcessor(object):
 
 
 #---------
-    def process_clouds(self, base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage):
+    def process_clouds(self, base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage, f_read):
         """
             make sure all donwloaded CoverageIDs come in with ".tif" extension
         """
@@ -202,8 +202,11 @@ class CFProcessor(object):
 # import dataset_reader
 # create a while loop here to go through gfp_flist and gfpmask_flist while!!!  needed (unitl )
 # call base_getcover
-
         wcs_ext = '.tif'
+
+
+
+
 
             # add the file-format extension to the list of CoverageIDs
             # the filenames are already changed in:  dataset_reader.base_getcover 
@@ -238,6 +241,24 @@ class CFProcessor(object):
 
         return cf_result
 
+#--------
+    def process_clouds_1(self, base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage, f_read):
+        """
+            proxy function - make sure the donwloaded CoverageIDs come in with ".tif" extension
+        """
+        wcs_ext = '.tif'
+            # add the file-format extension to the list of CoverageIDs
+            # the filenames are already changed in:  dataset_reader.base_getcover 
+        base_flist_e = [item+wcs_ext for item in base_flist]
+        base_mask_flist_e = [item+wcs_ext for item in base_mask_flist]
+        gfp_flist_e = [item+wcs_ext for item in gfp_flist]
+        gfpmask_flist_e = [item+wcs_ext for item in gfpmask_flist]
+
+        cf_result = self.change_img(base_flist_e, base_mask_flist_e, gfp_flist_e, gfpmask_flist_e, input_params, temp_storage, f_read, settings)
+
+        return cf_result
+
+
 #---------
     def access_ds(self, basefile, basemaskfile, temp_storage):
         """
@@ -262,7 +283,7 @@ class CFProcessor(object):
 
 #---------
     #def change_img(self, basemaskImg, infile_basemaskf, gfpmaskimg, infile_gfpmaskf, img_cnt):
-    def change_img(self, base_flist_e, base_mask_flist_e, gfp_flist_e, gfpmask_flist_e, input_params, temp_storage):
+    def change_img(self, base_flist_e, base_mask_flist_e, gfp_flist_e, gfpmask_flist_e, input_params, temp_storage, f_read, settings):
     #def  change_img(self, Imgfile, Maskfile, img_cnt):
         """
             replace clouded pixels with non-clouded pixels
@@ -271,6 +292,7 @@ class CFProcessor(object):
         """
         out_prefix = 'CF_'
         img_cnt = 1
+
 ### TODO  -> for future use of differernt output formats (see below)
 #        -- needs additional checking to find the correct gdal-driver-name  eg. GTiff from tif
 #        -- out_ext = '.'+input_params['output_format']
@@ -290,7 +312,7 @@ class CFProcessor(object):
 
         out_meta_mask = '_composite_mask.tif'
         #out_meta_list = '_composite_list.txt'
-        startTime1 = time.time()
+        startTime2 = time.time()
 
         #print 'File2: ', gfp_flist_ew
         #print 'Mask2: ', gfpmask_flist_e
@@ -372,7 +394,14 @@ class CFProcessor(object):
 
 
             for gfpfile, gfpmaskfile in zip(gfp_flist_e, gfpmask_flist_e):
-#                print 'Using GFP-'+str(img_cnt)+': ', gfpfile, type(gfpfile)
+                print 'Using GFP-'+str(img_cnt)+': ', gfpfile, type(gfpfile), gfpmaskfile, type(gfpmaskfile)
+#                if len(gfp_flist) >= 1:
+#                    f_read.base_getcover_single(gfpfile, input_params, settings, temp_storage, mask=False)
+                f_read.base_getcover_single(gfpfile[:-4], input_params, settings, temp_storage, mask=False)
+#                if len(gfpmask_flist) >= 1:
+#                    f_read.base_getcover_single(gfpmaskfile, input_params, settings, temp_storage, mask=True)   
+                f_read.base_getcover_single(gfpmaskfile[:-4], input_params, settings, temp_storage, mask=True)
+                
                 print 'Using GFPMask-'+str(img_cnt)+': ', gfpmaskfile, type(gfpmaskfile)
                 gfpImg, infile_gfpf, gfpmaskImg, infile_gfpmaskf = self.access_ds(gfpfile, gfpmaskfile, temp_storage)
                 gfpImgDim, gfpProj, gfpLocation = self.read_img(gfpImg, infile_gfpf)
@@ -429,10 +458,11 @@ class CFProcessor(object):
                     out_data[i-1][res2] = gfpBand1[res2]
 
                     # quit if no more clouded picels are available
-                print 'Nonzero pixel: ', np.count_nonzero(eval_mask)
+                print 'Number of masked pixels: ', np.count_nonzero(eval_mask)
 #                print 'Eval_mask.sum: ', eval_mask.sum()    # provides a cumulative sum of all non-zero pixels
                 #if np.count_nonzero(eval_mask) == 0:
                 if eval_mask.sum() == 0:
+                    print 'All pixels masked as clouds have been replaced'
                     break
 
                 img_cnt += 1
@@ -459,7 +489,7 @@ class CFProcessor(object):
 # @@ for testing intermediary - uncomment the following line
                 #outImg = None
 
-        print 'change_img - RUNTIME in sec: ',  time.time() - startTime1
+        print 'change_img - RUNTIME in sec: ',  time.time() - startTime2
 
         cf_result = [outFile[1], metamaskTIF, metamaskTXT]
 
@@ -483,11 +513,25 @@ class CF_cryoland_Processor(CFProcessor):
     """
         cloudfree processor for the cryoland snowmaps
     """
+## do we need this initialisation here ?
+    def __init__(self):
+        CFProcessor.__init__(self)
 
-    def process_clouds(self, base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage):
+    def process_clouds_1(self, base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage, f_read):
         """
             perform the required cloud removal processing steps
         """
+
+#        startTime1 = time.time()
+#        if len(gfp_flist) >= 1:
+#            f_read.base_getcover(gfp_flist, input_params, settings, temp_storage, mask=False)
+#    
+#        if len(gfpmask_flist) >= 1:
+#            f_read.base_getcover(gfpmask_flist, input_params, settings, temp_storage, mask=True)
+#    
+#        print 'dataset_download - RUNTIME in sec: ',  time.time() - startTime1
+
+
 ## TODO -- consider multiple files in the base_flist (eg. if extract=FULL or AOI spans multiple files)
     # some values used for cryoland cloud masking
         cloud_val = 30
@@ -529,38 +573,46 @@ class CF_cryoland_Processor(CFProcessor):
         cnt = 1
 
         for gfp_file in gfp_flist:
+            print 'Using GFP-'+str(cnt)+': ', gfp_file, type(gfp_file)
+            f_read.base_getcover_single(gfp_file, input_params, settings, temp_storage, mask=False)
+                # there are no mask-files in cryoland
+            #f_read.base_getcover_single(gfpmask_file, input_params, settings, temp_storage, mask=True)
+            
             gfile =  gdal_array.LoadFile(temp_storage+gfp_file)
             # evaluate the cloud masking
             res2 = np.ma.MaskedArray( ((outImg == cloud_val) | (outImg == zero_val) | (outImg >= nodata_val)) & ((gfile != zero_val ) & (gfile != cloud_val) & (gfile < nodata_val)) )
             outImg[res2] = gfile[res2]
             out_clouds = size(np.array(np.where(outImg == cloud_val)))
             cnt += 1
+            print 'Pixels masked as clouds: ', out_clouds
 
                 # if there are no more clouded pixels - stop processing
             if (out_clouds == 0):
+                print 'All pixels masked as clouds have been replaced'
                 break
 
-               # now create the cloudfree output products file
-            output = indriver.Create(outfile, base_img.shape[1], base_img.shape[0], inbase_NumBands, gDtype, options=tiff_options)
-                # set the GeoCorrdinates parameters etc.
-            output.SetGeoTransform(inbase_img.GetGeoTransform())
-                # set the Prohjection parameters etc.
-            output.SetProjection(inbase_img.GetProjection())
-            outBand = output.GetRasterBand(1)
-                # set the NoData value in the GTiff
-            if inbase_band.GetNoDataValue() is None:
-                outBand.SetNoDataValue(255)
-            else:
-                outBand.SetNoDataValue(inbase_band.GetNoDataValue())
+           # now create the cloudfree output products file
+        output = indriver.Create(outfile, base_img.shape[1], base_img.shape[0], inbase_NumBands, gDtype, options=tiff_options)
+            # set the GeoCorrdinates parameters etc.
+        output.SetGeoTransform(inbase_img.GetGeoTransform())
+            # set the Prohjection parameters etc.
+        output.SetProjection(inbase_img.GetProjection())
+        outBand = output.GetRasterBand(1)
+            # set the NoData value in the GTiff
+        if inbase_band.GetNoDataValue() is None:
+            outBand.SetNoDataValue(255)
+        else:
+            outBand.SetNoDataValue(inbase_band.GetNoDataValue())
 
-                # add the corrsponding colortable (taken from the input file)
-            outBand.SetRasterColorTable(inbase_band.GetRasterColorTable())
-            outBand.WriteArray(outImg, 0, 0)
-            output.FlushCache()
-                # calculate the overviewlist first
-            overview_sizes = calc_overviews(inbase_band, base_img.shape)
-                # create the overviews
-            output.BuildOverviews(resampling = "NEAREST", overviewlist = overview_sizes)
+            # add the corrsponding colortable (taken from the input file)
+        outBand.SetRasterColorTable(inbase_band.GetRasterColorTable())
+        outBand.WriteArray(outImg, 0, 0)
+        output.FlushCache()
+            # calculate the overviewlist first
+        overview_sizes = calc_overviews(inbase_band, base_img.shape)
+            # create the overviews
+        output.BuildOverviews(resampling = "NEAREST", overviewlist = overview_sizes)
+        print 'Overviewlist: ', overview_sizes
 
                     # free the open files
         output = None
@@ -581,6 +633,8 @@ class CF_landsat5_2a_Processor(CFProcessor):
     """
         cloudfree processor for the MUSCAT Landsat 5 (Level 2A) dataset
     """
+    def __init__(self):
+        CFProcessor.__init__(self)
 
 
 #/************************************************************************/
@@ -590,6 +644,8 @@ class CF_spot4take5_n2a_pente_Processor(CFProcessor):
     """
         cloudfree processor for the MUSCAT Landsat 5 (Level 2A) dataset
     """
+    def __init__(self):
+        CFProcessor.__init__(self)
 
 
 #/************************************************************************/
