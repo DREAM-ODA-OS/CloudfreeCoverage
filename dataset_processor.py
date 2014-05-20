@@ -202,7 +202,7 @@ class CFProcessor(object):
 # import dataset_reader
 # create a while loop here to go through gfp_flist and gfpmask_flist while!!!  needed (unitl )
 # call base_getcover
-        wcs_ext = '.tif'
+        wcs_ext = '.tiff'
 
 
 
@@ -246,7 +246,11 @@ class CFProcessor(object):
         """
             proxy function - make sure the donwloaded CoverageIDs come in with ".tif" extension
         """
-        wcs_ext = '.tif'
+        wcs_ext = '.tiff'
+
+
+
+
             # add the file-format extension to the list of CoverageIDs
             # the filenames are already changed in:  dataset_reader.base_getcover 
         base_flist_e = [item+wcs_ext for item in base_flist]
@@ -355,6 +359,10 @@ class CFProcessor(object):
                 # create the cloud-free output dataset
             outFile = infile_basef.rsplit(dsep, 1)
             outFile[1] = out_prefix + outFile[1]
+            if outFile[1].endswith('.tiff'):
+               outFile[1] = outFile[1].replace('.tiff','.tif')
+ 
+
 # @@ testing intermediary -> comment out the following line
             outImg = driver.Create((outFile[0]+dsep+outFile[1]), baseImgDim[0][0], baseImgDim[1][0], baseImgDim[2][0], gDType)
 
@@ -394,15 +402,25 @@ class CFProcessor(object):
 
 
             for gfpfile, gfpmaskfile in zip(gfp_flist_e, gfpmask_flist_e):
-                print 'Using GFP-'+str(img_cnt)+': ', gfpfile, type(gfpfile), gfpmaskfile, type(gfpmaskfile)
+                    # if we have added an extension in th file_list, we must remove it now again
+       #         gfpfile = [ os.path.splitext(gfpfile)[0]]
+       #         gfpmaskfile = [ os.path.splitext(gfpmaskfile)[0]]
+                gfpfile1 = [gfpfile[:-5]]
+                gfpmaskfile1 = [gfpmaskfile[:-5]]
+                
+ 
+                print 'Using GFP-'+str(img_cnt)+': ', gfpfile   #, type(gfpfile)
+                
 #                if len(gfp_flist) >= 1:
 #                    f_read.base_getcover_single(gfpfile, input_params, settings, temp_storage, mask=False)
-                f_read.base_getcover_single(gfpfile[:-4], input_params, settings, temp_storage, mask=False)
+              #  f_read.base_getcover_single(gfpfile[:-4], input_params, settings, temp_storage, mask=False)     #old
+                f_read.base_getcover(gfpfile1, input_params, settings, temp_storage, mask=False)                
 #                if len(gfpmask_flist) >= 1:
 #                    f_read.base_getcover_single(gfpmaskfile, input_params, settings, temp_storage, mask=True)   
-                f_read.base_getcover_single(gfpmaskfile[:-4], input_params, settings, temp_storage, mask=True)
+              #  f_read.base_getcover_single(gfpmaskfile[:-4], input_params, settings, temp_storage, mask=True)      #old
+                f_read.base_getcover(gfpmaskfile1, input_params, settings, temp_storage, mask=True)                
                 
-                print 'Using GFPMask-'+str(img_cnt)+': ', gfpmaskfile, type(gfpmaskfile)
+                print 'Using GFPMask-'+str(img_cnt)+': ', gfpmaskfile   #, type(gfpmaskfile)
                 gfpImg, infile_gfpf, gfpmaskImg, infile_gfpmaskf = self.access_ds(gfpfile, gfpmaskfile, temp_storage)
                 gfpImgDim, gfpProj, gfpLocation = self.read_img(gfpImg, infile_gfpf)
                 gfpmaskDim, gfpmaskProj, gfpmaskLocation, gfpmaskImg, gfpmaskClouds = self.read_mask(gfpmaskImg, infile_gfpmaskf, isBaseImg=False)
@@ -411,7 +429,7 @@ class CFProcessor(object):
                 res2 = np.ma.MaskedArray((eval_mask > 0) & (gfpmaskImg == 0))
                 #print type(basemaskImg), basemaskImg.shape, type(gfpmaskImg), gfpmaskImg.shape
                 #print 'res2: ', '\n',type(res2), res2.shape
-                print 'n_cloudpixel replaced: ', res2.sum()
+                print 'N_cloudpixel replaced: ', res2.sum()
 
                 metamaskImg[res2] = img_cnt
 #                print 'metamaskTIF: ',type(metamaskImg),  metamaskImg.shape, metamaskImg.min(), metamaskImg.max()
@@ -448,6 +466,7 @@ class CFProcessor(object):
 
                 applied_mask = infile_gfpmaskf.rsplit(dsep, 1)
                 out_metamask_txt.write(str(img_cnt)+';'+applied_mask[1]+'\n')
+                out_metamask_txt.flush()
 
 
                     # read all bands, check each for cloud-free areas, and write to cloud-free image
@@ -458,7 +477,7 @@ class CFProcessor(object):
                     out_data[i-1][res2] = gfpBand1[res2]
 
                     # quit if no more clouded picels are available
-                print 'Number of masked pixels: ', np.count_nonzero(eval_mask)
+                print 'Remaining masked pixels: ', np.count_nonzero(eval_mask)
 #                print 'Eval_mask.sum: ', eval_mask.sum()    # provides a cumulative sum of all non-zero pixels
                 #if np.count_nonzero(eval_mask) == 0:
                 if eval_mask.sum() == 0:
@@ -481,7 +500,7 @@ class CFProcessor(object):
 
                 # calculate the overviews needed
             overview_sizes = calc_overviews(outBand, [baseImgDim[0][0], baseImgDim[1][0]])
-            print 'Overviewlist: ', overview_sizes
+          #  print 'Overviewlist: ', overview_sizes
                 # initate pyramid creation
             outImg.BuildOverviews(resampling="NEAREST", overviewlist=overview_sizes)
 
@@ -521,7 +540,7 @@ class CF_cryoland_Processor(CFProcessor):
         """
             perform the required cloud removal processing steps
         """
-
+        out_meta_mask = '_composite_mask.txt'
 #        startTime1 = time.time()
 #        if len(gfp_flist) >= 1:
 #            f_read.base_getcover(gfp_flist, input_params, settings, temp_storage, mask=False)
@@ -539,12 +558,19 @@ class CF_cryoland_Processor(CFProcessor):
     # all values above are not in use in CryoLand
         nodata_val = 253
     # tiff_settings for the tif-creation
-        tiff_options = [ "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256" ]
+      #  tiff_options = [ "TILED=YES", "BLOCKXSIZE=256", "BLOCKYSIZE=256" ]
+        tiff_options = []
 #            "COMPRESS=DEFLATE"]                         # not used in Cryoland
 #            "TIFFTAG_GDAL_NODATA=255" }# "NODATA=255" ]        # these seem not to work
 
-        outfile = os.path.join(temp_storage+'CF_'+base_flist[0])
-
+        outFile = os.path.join(temp_storage+'CF_'+base_flist[0])
+        metamaskTXT = outFile.replace('.tif', out_meta_mask)
+       
+        if os.path.exists(metamaskTXT):
+            out_metamask_txt = open(metamaskTXT, "a")
+        else:
+            out_metamask_txt = open(metamaskTXT, "w")
+            
 # @@ for debugging
        # do_interupt()
 
@@ -569,12 +595,20 @@ class CF_cryoland_Processor(CFProcessor):
 
         outImg = np.zeros((base_img.shape[0], base_img.shape[1]), dtype=nDtype)
         outImg = np.array(base_img)
+       # res_base = np.ma.MaskedArray( ((outImg == cloud_val) | (outImg == zero_val) | (outImg >= nodata_val)) )
+        num_clouds = size(np.array(np.where(outImg == cloud_val)))
+        print 'Pixels masked as clouds: ', num_clouds
         out_clouds = 0
         cnt = 1
-
+        
+        
         for gfp_file in gfp_flist:
-            print 'Using GFP-'+str(cnt)+': ', gfp_file, type(gfp_file)
-            f_read.base_getcover_single(gfp_file, input_params, settings, temp_storage, mask=False)
+            print 'Using GFP-'+str(cnt)+': ', gfp_file #, type(gfp_file)
+
+            gfp_file1 = [gfp_file]
+
+            f_read.base_getcover(gfp_file1, input_params, settings, temp_storage, mask=False)
+          #  f_read.base_getcover_single(gfp_file, input_params, settings, temp_storage, mask=False)     #old
                 # there are no mask-files in cryoland
             #f_read.base_getcover_single(gfpmask_file, input_params, settings, temp_storage, mask=True)
             
@@ -583,16 +617,22 @@ class CF_cryoland_Processor(CFProcessor):
             res2 = np.ma.MaskedArray( ((outImg == cloud_val) | (outImg == zero_val) | (outImg >= nodata_val)) & ((gfile != zero_val ) & (gfile != cloud_val) & (gfile < nodata_val)) )
             outImg[res2] = gfile[res2]
             out_clouds = size(np.array(np.where(outImg == cloud_val)))
+            
+            out_metamask_txt.write(str(cnt)+';'+str(gfp_file)+'\n')
+            out_metamask_txt.flush()
+            
             cnt += 1
-            print 'Pixels masked as clouds: ', out_clouds
-
+            print 'N_cloudpixel replace: ', num_clouds - out_clouds
+            print 'Remaining masked pixels: ', out_clouds
+            num_clouds = out_clouds
+            
                 # if there are no more clouded pixels - stop processing
             if (out_clouds == 0):
                 print 'All pixels masked as clouds have been replaced'
                 break
 
            # now create the cloudfree output products file
-        output = indriver.Create(outfile, base_img.shape[1], base_img.shape[0], inbase_NumBands, gDtype, options=tiff_options)
+        output = indriver.Create(outFile, base_img.shape[1], base_img.shape[0], inbase_NumBands, gDtype, options=tiff_options)
             # set the GeoCorrdinates parameters etc.
         output.SetGeoTransform(inbase_img.GetGeoTransform())
             # set the Prohjection parameters etc.
@@ -620,8 +660,9 @@ class CF_cryoland_Processor(CFProcessor):
         base_img = None
         gfp_file = None
         outImg = None
-
-        return outfile
+        out_metamask_txt.close()
+        
+        return [os.path.basename(outFile),os.path.basename(metamaskTXT)]
 
 
 

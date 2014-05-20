@@ -69,6 +69,8 @@ from create_cloudless import parse_xml
 
 # for debugging
 from create_cloudless import do_interupt
+import wcs_client
+wcs = wcs_client.wcsClient()
 
 
 #/************************************************************************/
@@ -199,11 +201,10 @@ def get_daterange(from_date, composite_range):
     from_day = int(from_date[6:8])
     time_stamp = datetime.datetime(day=from_day, month=from_month, year=from_year )
     difference = time_stamp + datetime.timedelta(days=int(composite_range))
-    to_date ='%.4d%.2d%.2d' %  (difference.year, difference.month, difference.day)
+  #  to_date ='%.4d%.2d%.2d' %  (difference.year, difference.month, difference.day) # old
+    to_date ='%.4d-%.2d-%.2d' %  (difference.year, difference.month, difference.day)
 
     return to_date
-
-
 
 
 #/************************************************************************/
@@ -219,12 +220,12 @@ class Reader(object):
          - provide the listing of Base-files, Base-masks, GFP-files and GFP-masks to be used
     """
         # default timeout for all sockets (in case a requests hangs)
-    timeout = 180
-    socket.setdefaulttimeout(timeout)
-
-        # XML search tags for the request responses
-    xml_ID_tag = ['wcseo:DatasetSeriesId', 'wcs:CoverageId' ]
-    xml_date_tag = ['gml:beginPosition',  'gml:endPosition']
+#    timeout = 180
+#    socket.setdefaulttimeout(timeout)
+#
+#        # XML search tags for the request responses
+#    xml_ID_tag = ['wcseo:DatasetSeriesId', 'wcs:CoverageId' ]
+#    xml_date_tag = ['gml:beginPosition',  'gml:endPosition']
 
 #---------
 #    def fopen(self, filename):
@@ -247,8 +248,11 @@ class Reader(object):
         """
             uses WCS requests to generate filelist of files available  at service/server
         """
+
         cov_list = self.base_desccover(input_params, settings, mask=False)
+
         mask_list = self.base_desccover(input_params, settings, mask=True)
+
 
             # split up the received listing - Base, Base_mask, GFPs, GFPMask  (--> cryoland products do not have masks)
         cnt = 0
@@ -336,12 +340,14 @@ class Reader(object):
         toi_values = []
         if input_params['scenario'] == 'T':
             target_date = get_daterange(input_params['toi'], -input_params['period'])
+            in_date = get_daterange(input_params['toi'], 0)
             toi_values.append(target_date)
-            toi_values.append(input_params['toi'])
+            toi_values.append(in_date)
 
         if input_params['scenario'] == 'B':
             target_date = get_daterange(input_params['toi'], input_params['period'])
-            toi_values.append(input_params['toi'])
+            in_date = get_daterange(input_params['toi'], 0)
+            toi_values.append(in_date)
             toi_values.append(target_date)
 
         if input_params['scenario'] == 'M':
@@ -354,8 +360,9 @@ class Reader(object):
 
 
         service1 = service.rsplit('EOID')[0]
-        dss = 'eoid'+service.rsplit('EOID')[1]
-
+      #  dss = 'eoid'+service.rsplit('EOID')[1]  #old
+        dss = service.rsplit('EOID')[1][1:]
+        
         return service1, toi_values, aoi_values, dss
 
 #---------
@@ -364,33 +371,46 @@ class Reader(object):
             Send a DescribeEOCoverageSet request to the WCS Service, asking for the available Coverages, according
             to the user defined AOI, TOI, and DatasetSeries. The function returns the available CoveragesIDs.
         """
-        base_desccov = set_base_desccov()
 
-        service1, toi_values, aoi_values, dss = self.set_request_values(settings, input_params, mask)
+#        base_desccov = set_base_desccov()
 
-## older version
-            # create the basic url
-#        request_url_desccov = service1+base_desccov[0]+dss+base_desccov[1]+aoi_values[0]+','+ \
-#            aoi_values[1]+base_desccov[2]+aoi_values[2]+','+aoi_values[3]+base_desccov[3]+toi_values[0]+'T00:00'+ \
-#            base_desccov[4]+toi_values[1]+'T23:59'+base_desccov[5]
-        request_url_desccov = service1+base_desccov[0]+base_desccov[1]+base_desccov[2]+dss+base_desccov[3]+aoi_values[0]+','+ \
-            aoi_values[1]+base_desccov[4]+aoi_values[2]+','+aoi_values[3]+base_desccov[5]+toi_values[0]+'T00:00'+ \
-            base_desccov[6]+toi_values[1]+'T23:59'+base_desccov[7]
-        print request_url_desccov
-        try:
-                # access and the url
-            res_desccov = urllib2.urlopen(request_url_desccov)
-                # read the content of the url
-            descov_xml = res_desccov.read()
-            cids = parse_xml(descov_xml,  self.xml_ID_tag[1])
-            res_desccov.close()
-            return cids             # return value to calling get_filelist()
+      #  service1, toi_values, aoi_values, dss = self.set_request_values(settings, input_params, mask)   # old
+        target_server, toi_values, aoi_values, dss = self.set_request_values(settings, input_params, mask)
 
-        except urllib2.URLError, url_ERROR:
-            if hasattr(url_ERROR, 'reason'):
-                print  time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  Server not accessible -", url_ERROR.reason
-            elif hasattr(url_ERROR, 'code'):
-                print time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  The server couldn\'t fulfill the request - Code returned:  ", url_ERROR.code,  url_ERROR.read()
+        request = {'request': 'DescribeEOCoverageSet' , 
+                   'server_url': target_server , 
+                   'eoID': dss ,
+                   'subset_lon': aoi_values[0]+','+aoi_values[1] ,
+                   'subset_lat': aoi_values[2]+','+aoi_values[3] ,
+                   'subset_time': toi_values[0]+'T00:00'+','+ toi_values[1]+'T23:59' ,
+                   'IDs_only': True }
+                   
+                   
+        cids = wcs.DescribeEOCoverageSet(request)
+        
+        return cids   
+
+       
+### older version
+#            # create the basic url
+#        request_url_desccov = service1+base_desccov[0]+base_desccov[1]+base_desccov[2]+dss+base_desccov[3]+aoi_values[0]+','+ \
+#            aoi_values[1]+base_desccov[4]+aoi_values[2]+','+aoi_values[3]+base_desccov[5]+toi_values[0]+'T00:00'+ \
+#            base_desccov[6]+toi_values[1]+'T23:59'+base_desccov[7]
+#        print request_url_desccov
+#        try:
+#                # access and the url
+#            res_desccov = urllib2.urlopen(request_url_desccov)
+#                # read the content of the url
+#            descov_xml = res_desccov.read()
+#            cids = parse_xml(descov_xml,  self.xml_ID_tag[1])
+#            res_desccov.close()
+#            return cids             # return value to calling get_filelist()
+#
+#        except urllib2.URLError, url_ERROR:
+#            if hasattr(url_ERROR, 'reason'):
+#                print  time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  Server not accessible -", url_ERROR.reason
+#            elif hasattr(url_ERROR, 'code'):
+#                print time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  The server couldn\'t fulfill the request - Code returned:  ", url_ERROR.code,  url_ERROR.read()
 
 #---------
     def apply_scenario(self, gfp_flist, gfpmask_flist, scenario, base_flist, base_mask_flist):
@@ -458,101 +478,135 @@ class Reader(object):
         """
             Function to actually requesting and saving the available coverages on the local file system.
         """
-        wcs_ext = '.tif'
-        base_getcov = set_base_getcov()
+     #  wcs_ext = '.tif'   #old
+     #  base_getcov = set_base_getcov()  #old
 
        # try:
                 # get the time of downloading - to be used in the filename (to differentiate if multiple AOIs of
                 # the same coverages are downloaded to the same output directory)
             #dwnld_time = time.strftime("%Y%m%d%H%M%S",time.gmtime())
-        service1, toi_values, aoi_values, dss = self.set_request_values(settings, input_params, mask=False)
+        target_server, toi_values, aoi_values, dss = self.set_request_values(settings, input_params, mask=False)
 
+      #  COVERAGEID = ''
+        request = {'request': 'GetCoverage' , 
+                   'server_url': target_server , 
+                       # this is set in the file_list loop
+               #    'coverageID': COVERAGEID , 
+                   'format': 'tiff' ,
+                   'subset_x': 'epsg:4326 Long '+ aoi_values[0]+','+aoi_values[1] , 
+                   'subset_y': 'epsg:4326 Lat '+aoi_values[2]+','+aoi_values[3],
+                  # 'output':  input_params['output_dir'] }
+                       # we need to use the tmporary directory here!
+                   'output':  temp_storage }
+                 #  'rangesubset': '3,2,1' ,
+                 #  'outputcrs': '3035' ,
+
+        
             # create output-crs syntax to be added to GetCoverage request
         if input_params['output_crs'] != None:
 #            output_crs = "&outputcrs="+input_params['output_crs']
-            output_crs = base_getcov[9]+input_params['output_crs']
-        else:
-            output_crs = ''
+           # output_crs = base_getcov[9]+input_params['output_crs']  # old
+            request['outputcrs'] = input_params['output_crs'].split(':')[1]
+      #  else:      #old
+      #      output_crs = ''        #old
 
             # handle band-subsetting
         if input_params['bands'] != '999':
             bands = ''
             for bb in input_params['bands']:
                 bands = bands+bb+','
-                rangesubset = base_getcov[8]+bands[:-1]
-        else:
-            rangesubset = ''
+              #  rangesubset = base_getcov[8]+bands[:-1]     #old
+  
+            request['rangesubset'] = bands[:-1]
+       # else:      #old
+       #     rangesubset = ''       #old
 
             # don't use bandsubsetting for requests regarding mask-files
         if mask is True:
-            rangesubset = ''
+           # rangesubset = ''       # old
+            request['rangesubset'] = None
+
+
+
+
 
 ### TODO -- handle input_params['output_format']
 # to do so the  base_getcov[*]  (and probably also the base_desccov[*] should be better separated (for easier access))
 #            if input_params['output_format'] is not 'tif':
 #                base_getcov[1] = 'image/'+input_params['output_format']
 
-        try:
-                # perform it for all CoverageIDs
-            for COVERAGEID in file_list:
-                    # construct the url for the WCS access
-            # old request @@
-#                request_url_getcov = service1+base_getcov[0]+COVERAGEID+ \
-#                    base_getcov[1]+aoi_values[0]+','+aoi_values[1]+base_getcov[2]+aoi_values[2]+','+aoi_values[3]+ \
-#                    base_getcov[3]+output_crs+rangesubset
-                request_url_getcov = service1+base_getcov[0]+base_getcov[1]+base_getcov[2]+base_getcov[3]+COVERAGEID+ \
-                    base_getcov[4]+base_getcov[5]+aoi_values[0]+','+aoi_values[1]+base_getcov[6]+aoi_values[2]+','+aoi_values[3]+ \
-                    base_getcov[7]+output_crs+rangesubset
-
-                print request_url_getcov
-                    # open and access the url
-
-                try:
-                    res_getcov = urllib2.urlopen(request_url_getcov)
-
-## comment out the next line if you don't want to have the requests written to the logfile
-                    #print request_url_getcov, ' - ',  res_getcov.code
-
-                        # save the received coverages in the corresponding file at the temp-directory
-                      #outfile = COVERAGEID+'_'+dwnld_time+COVERAGEID[-4:]
-# this here could also be a seperate function
-                    if COVERAGEID.endswith(('.tif')):
-                        outfile = COVERAGEID
-                    elif COVERAGEID.endswith(('.TIF','.Tif')):
-                        outfile = COVERAGEID[:-4]+wcs_ext
-                    elif COVERAGEID.endswith(('.tiff','.Tiff','.TIFF')):
-                        outfile = COVERAGEID[:-5]+wcs_ext
-                    else:
-                        outfile = COVERAGEID+wcs_ext
-                        
-                    #file_getcov = open(input_params['output_dir']+outfile, 'w+b')
-                    #file_getcov = open(settings['def_temp_dir']+outfile, 'w+b')
-# @@ debugging
-                    print temp_storage
-                    print outfile
-                    file_getcov = open(temp_storage+outfile, 'w+b')
-                    file_getcov.write(res_getcov.read())
-                    file_getcov.flush()
-                    os.fsync(file_getcov.fileno())
-                    file_getcov.close()
-                    res_getcov.close()
-
-                except IOError as (errno, strerror):
-                    print "I/O error({0}): {1}".format(errno, strerror)
-                except:
-                    print "Unexpected error:", sys.exc_info()[0]
-                    raise
 
 
-        except urllib2.URLError, url_ERROR:
-            if hasattr(url_ERROR, 'reason'):
-                print  time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  Server not accessible -", url_ERROR.reason
-            elif hasattr(url_ERROR, 'code'):
-                print time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  The server couldn\'t fulfill the request - Code returned:  ", url_ERROR.code,  url_ERROR.read()
-        except TypeError:
-            pass
+        for COVERAGEID in file_list:
+            request['coverageID'] = COVERAGEID
+            res_getcov = wcs.GetCoverage(request)
+
+
+###old
+#        try:
+#                # perform it for all CoverageIDs
+#            for COVERAGEID in file_list:
+#                    # construct the url for the WCS access
+#            # old request @@
+##                request_url_getcov = service1+base_getcov[0]+COVERAGEID+ \
+##                    base_getcov[1]+aoi_values[0]+','+aoi_values[1]+base_getcov[2]+aoi_values[2]+','+aoi_values[3]+ \
+##                    base_getcov[3]+output_crs+rangesubset
+#                request_url_getcov = service1+base_getcov[0]+base_getcov[1]+base_getcov[2]+base_getcov[3]+COVERAGEID+ \
+#                    base_getcov[4]+base_getcov[5]+aoi_values[0]+','+aoi_values[1]+base_getcov[6]+aoi_values[2]+','+aoi_values[3]+ \
+#                    base_getcov[7]+output_crs+rangesubset
+#
+#                print request_url_getcov
+#                    # open and access the url
+#
+#                try:
+#                    res_getcov = urllib2.urlopen(request_url_getcov)
+#
+### comment out the next line if you don't want to have the requests written to the logfile
+#                    #print request_url_getcov, ' - ',  res_getcov.code
+#
+#                        # save the received coverages in the corresponding file at the temp-directory
+#                      #outfile = COVERAGEID+'_'+dwnld_time+COVERAGEID[-4:]
+## this here could also be a seperate function
+#                    if COVERAGEID.endswith(('.tif')):
+#                        outfile = COVERAGEID
+#                    elif COVERAGEID.endswith(('.TIF','.Tif')):
+#                        outfile = COVERAGEID[:-4]+wcs_ext
+#                    elif COVERAGEID.endswith(('.tiff','.Tiff','.TIFF')):
+#                        outfile = COVERAGEID[:-5]+wcs_ext
+#                    else:
+#                        outfile = COVERAGEID+wcs_ext
+#                        
+#                    #file_getcov = open(input_params['output_dir']+outfile, 'w+b')
+#                    #file_getcov = open(settings['def_temp_dir']+outfile, 'w+b')
+## @@ debugging
+#                    print temp_storage
+#                    print outfile
+#                    file_getcov = open(temp_storage+outfile, 'w+b')
+#                    file_getcov.write(res_getcov.read())
+#                    file_getcov.flush()
+#                    os.fsync(file_getcov.fileno())
+#                    file_getcov.close()
+#                    res_getcov.close()
+#
+#                except IOError as (errno, strerror):
+#                    print "I/O error({0}): {1}".format(errno, strerror)
+#                except:
+#                    print "Unexpected error:", sys.exc_info()[0]
+#                    raise
+#
+#
+#        except urllib2.URLError, url_ERROR:
+#            if hasattr(url_ERROR, 'reason'):
+#                print  time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  Server not accessible -", url_ERROR.reason
+#            elif hasattr(url_ERROR, 'code'):
+#                print time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  The server couldn\'t fulfill the request - Code returned:  ", url_ERROR.code,  url_ERROR.read()
+#        except TypeError:
+#            pass
 
 #---------
+#
+#  THIS SEEMS NOT TO BE USED anymore
+#
     def base_getcover_single(self, COVERAGEID, input_params, settings, temp_storage, mask):
         """
             Function to actually requesting and saving the available coverages on the local file system.

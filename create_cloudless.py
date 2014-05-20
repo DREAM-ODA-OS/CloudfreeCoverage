@@ -58,15 +58,14 @@
 import sys
 import os
 import time
-#import glob
 import getopt
-#from datetime import date
+import wcs_client
 
 # specific imports
 from get_config import get_config
 import tempfile
 import shutil
-import urllib2,  socket
+#import urllib2,  socket
 from xml.dom import minidom
 
     # check for OS Platform and set the Directory-Separator to be used
@@ -80,12 +79,16 @@ dsep = os.sep
 default_config_file = "/home/schillerc/cs_pylib/spot4take5/conf/cloudless_config.cfg"
 
     # default timeout for all sockets (in case a requests hangs)
-timeout = 180
-socket.setdefaulttimeout(timeout)
+#timeout = 180
+#socket.setdefaulttimeout(timeout)
 
     # XML search tags for the request responses
 xml_ID_tag = ['wcseo:DatasetSeriesId', 'wcs:CoverageId' ]
 xml_date_tag = ['gml:beginPosition',  'gml:endPosition']
+
+    # create a wcsClient instance to be used
+global wcs
+wcs = wcs_client.wcsClient()
 
 
 # ----------
@@ -103,14 +106,16 @@ def usage():
     """
     print ""
     print "Usage: create_cloudless.py  [-d|--dataset] <dataset>  [-a|--aoi] <'minx,maxx,miny,maxy'>  [-t|--time] <startdate> "
-    print "                  ([-s|--scenario] <T|M|B>)  ([-e|--extract] <full|sub>) ([-p|--period] <num days>)"
+    print "                  ([-s|--scenario] <T|M|B>) ([-p|--period] <num_days>) (-b|--bands <list_of_bands>) "
+    print "                  (-o|--output_dir <target_path>) (-l|--keep_temporary) "
+    print " "
     print "  Tool to generate cloudless products over a period of X-days from the existing products. The processing ends after X-days"
     print "  or when no more clouds are present."
     print "  REQUIRED parameters: "
     print "   -d|--dataset <dataset>    --  Dataset to be used e.g. SPOT4Take5 "
     print "   -a|--aoi <'maxx,minx,maxy,miny'>  --  the Area of Interest (AOI), with the coordinates of the BoundingBox, provided as"
     print "                                          the corner coordinates in Degrees (WGS84, Lat/Lon)"
-    print "   -t|--time <stardate>      --  Starttime - Date of the image to start with in ISO-Format e.g. '20120423' "
+    print "   -t|--time <startdate>     --  Starttime - Date of the image to start with in ISO-Format e.g. '20120423' "
     print "  OPTIONAL parameters: "
     print "   -h|--help                 --  This help information"
     print "   -i|--info                 --  Information about available DatasetSeries (result of GetCapability-DatasetSeriesSummary requests)"
@@ -124,6 +129,8 @@ def usage():
     print "                                 a period of 10 days/images will usually be sufficient to achieve a good result."
     print "   -b|--bands <'b1,b2,..bn'> --  list of bands to be processed e.g. '3,2,1'  [default = use all bands] "
     print "   -o|--output_dir           --  location to store the output/results (optional: -> but only for CLI usage) "
+    print "   -k|--keep_temporary       --  do not delete the input files used for Cloudfree Product generation, but copy them "
+    print "                                 to the output_dir"
 # TODO - not fully implemented yet
 #    print "   -c|--output_crs           --  the EPSG code (epsg:number) of the desired output [default='epsg:4326'] "
 #    print "   -y|--output_datatype      --  the datatype of the desired output e.g. INT8, UINT16, FLOAT32 [default = same as input] "
@@ -132,8 +139,10 @@ def usage():
 #    print "                                  - currently only GeoTiFF is supported"
 #    print "   -e|--extract  <FULL|SUB>  --  work on an extracted subset or use all datsets, as  full files, touched by the AOI"
 # TODO: @@  maybe we also should consider a WCS-server address as an input recieved from the WPS-server
-    print ""
-    print "Example: create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s T -b 3,2,1 -p 90 "
+    print " "
+    print " "
+    print "Example: ./create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s T -b 3,2,1 -p 90 "
+    print " "
     sys.exit()
 
 
@@ -230,44 +239,34 @@ def parse_xml(in_xml, tag):
 #/************************************************************************/
 
 def list_available_dss(target_server, printit):
-    request_dss_sum = 'service=wcs&version=2.0.0&request=GetCapabilities&sections=DatasetSeriesSummary'
-    #service = settings['dataset.'+input_params['dataset']]
-    #service1 = service.rsplit('EOID')[0]
-    #request_url_dss_sum = service1+request_dss_sum
-    request_url_dss_sum = target_server+request_dss_sum
+    print target_server
 
-        # for logging purpose
-    print 'Server: ', '\n', request_url_dss_sum
+    #wcs = wcs_client.wcsClient()
+    request = {'request': 'GetCapabilities', 
+               'sections': 'DatasetSeriesSummary', 
+               'server_url': target_server }
+    
+    getcap_xml = wcs.GetCapabilities(request)
 
-    try:
-            # access and the url & read the content
-        res_dss_sum = urllib2.urlopen(request_url_dss_sum)
-        getcap_xml = res_dss_sum.read()
-
+    if getcap_xml is not None:
         dss_ids = parse_xml(getcap_xml, xml_ID_tag[0])
         dss_date1 = parse_xml(getcap_xml, xml_date_tag[0])
         dss_date2 = parse_xml(getcap_xml, xml_date_tag[1])
+    else:
+        err_msg = 'Server not responding -- Skipping...'
+        print err_msg
+        return
+
 
 
 #### for logging and/or for debugging
-        if printit is True:
-                # print the available DatasetSeriesIds to the screen
-            print "The following DatasetSeries [Name: From-To] are available:"
-            for i in range(len(dss_ids)):
-                print " - ", dss_ids[i] , ": \t", dss_date1[i], " - ", dss_date2[i]
+    if printit is True:
+            # print the available DatasetSeriesIds to the screen
+        print "The following DatasetSeries [Name: From-To] are available:"
+        for i in range(len(dss_ids)):
+            print " - ", dss_ids[i] , ": \t", dss_date1[i], " - ", dss_date2[i]
 
-
-            # close the acces to the url
-        res_dss_sum.close()
-#        dss_result=[dss_ids, dss_date1, dss_date2]
-#        return  dss_result
-
-    except urllib2.URLError, url_ERROR:
-        if hasattr(url_ERROR, 'reason'):
-            print  time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  Server not accessible -", url_ERROR.reason
-        elif hasattr(url_ERROR, 'code'):
-            print time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  The server couldn\'t fulfill the request - Code returned:  ", url_ERROR.code,  url_ERROR.read()
-
+    del wcs
 
 #/************************************************************************/
 #/*                              do_cleanup()                            */
@@ -276,21 +275,40 @@ def do_cleanup_tmp(temp_storage, cf_result, input_params):
     """
         clean up the temporary storagespace  used during download and processing
     """
+    if input_params['keep_temporary'] is False:
+        if type(cf_result) is list:
+            for elem in cf_result:
+                elem = os.path.basename(elem)
+                #shutil.copy2(temp_storage+dsep+elem, input_params['output_dir'])
+                shutil.copy2(temp_storage+dsep+elem, input_params['output_dir'])
+    
+        elif type(cf_result) is unicode or type(cf_result) is str:
+            shutil.copy2(temp_storage+dsep+elem, input_params['output_dir'])
+    
+    
+    
+        if os.path.exists(input_params['output_dir']+os.path.basename(cf_result[0])):
+            print '[Info] -- The Cloudfree dataset has been generated and is available at: '
+            for elem in cf_result:
+                if os.path.exists(input_params['output_dir']+os.path.basename(elem)):
+                    print input_params['output_dir']+os.path.basename(elem)
+    #            if os.path.exists(input_params['output_dir']+os.path.basename(cf_result[2])):
+    #                print input_params['output_dir']+os.path.basename(cf_result[2])
+    
+              # remove all the temporay storage area
+            shutil.rmtree(temp_storage, ignore_errors=True)        
+        else:
+            print '[Error] -- The generated Cloudfree output-file could not be written to: ', input_params['output_dir']+os.path.basename(cf_result)
+            sys.exit(7) 
 
-    for elem in cf_result:
-        shutil.copy2(temp_storage+dsep+elem, input_params['output_dir'])
-
-    if os.path.exists(input_params['output_dir']+cf_result[0]) \
-      and os.path.exists(input_params['output_dir']+cf_result[1]) \
-      and os.path.exists(input_params['output_dir']+cf_result[2]):
-          # remove all the temporay storage area
-#        shutil.rmtree(temp_storage, ignore_errors=True)
-        print '[Info] -- The Cloud-free dataset has been generated and is available at: '
-        for elem in cf_result:
-            print '  - ', input_params['output_dir']+elem
     else:
-        print '[Error] -- The generated output-file could not be written to: ', input_params['output_dir']+cf_result
-        sys.exit(7)
+        print temp_storage[:-1]
+        out_location = input_params['output_dir']+os.path.basename(temp_storage[:-1])
+        print '[Info] -- The Cloudfree dataset and the input files are available at: ', out_location
+        
+        shutil.move(temp_storage, input_params['output_dir'])
+
+
 
 #/************************************************************************/
 #/*                           do_print_flist()                           */
@@ -316,9 +334,9 @@ def get_cmdline():
 
 # TODO: @@  maybe we also should consider a WCS-server address as an input recieved from the WPS-server
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hia:d:t:s:e:p:c:b:y:o:f:", ["help", "info", "aoi",
+        opts, args = getopt.getopt(sys.argv[1:], "hika:d:t:s:e:p:c:b:y:o:f:", ["help", "info", "aoi",
                     "time", "dataset", "scenario", "extract", "period", "crs", "bands", "datatype",
-                    "output_dir", "output_format"])
+                    "output_dir", "output_format", "keep_temporary"])
     except getopt.GetoptError, err:
         # print help information and exit - will print something like "option -x not recognized"
         print '[Error] -- ', now(), str(err)
@@ -335,8 +353,10 @@ def get_cmdline():
     'bands': None,
     'output_datatype'  : None,
     'output_dir'   : None,
-    'output_format' : None
+    'output_format' : None,
+    'keep_temporary' : False    
     }
+    
 
 
     for opt, arg in opts:
@@ -399,6 +419,8 @@ def get_cmdline():
 
         elif opt in ("-f", "--output_format"):
             input_params['output_format'] = str.lower(arg)
+        elif opt in ("-k","--keep_temporary"):
+            input_params['keep_temporary'] = True
 
         else:
             print '[Error] -- ', now(), ' unknown option(s): ', opts
@@ -449,8 +471,9 @@ def main():
         err_code = 3
         handle_error(err_msg, err_code)
 
-# @@ for debugging
-    #do_interupt()
+## @@ for debugging
+#    from IPython import embed  
+#    embed()  
 
         # call the reader module for the resepective dataset and process the data
     import dataset_reader
@@ -470,7 +493,7 @@ def main():
     do_print_flist('GFP_Mask', gfpmask_flist)
 
 
-    print 'dataset_listing - RUNTIME in sec: ',  time.time() - startTime1
+    print 'Dataset_listing - RUNTIME in sec: ',  time.time() - startTime1
         # create a temporarylocation under the provided settings['general.def_temp_dir'] to be used
         # for the temporary storage during processing
     temp_storage = tempfile.mkdtemp(prefix='cloudfree_',dir=settings['general.def_temp_dir'])
@@ -503,18 +526,20 @@ def main():
     attribute = getattr(dataset_processor, cfprocessor)
     f_proc = attribute()
     #cf_result = f_proc.process_clouds_1(base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage, f_read)
+                
     cf_result = f_proc.process_clouds_1(base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage, f_read)
 
 
 # @@ -- off during testing
         # copy results to output location and clean-up the temporary storage area
-   #do_cleanup_tmp(temp_storage, cf_result, input_params)
+    do_cleanup_tmp(temp_storage, cf_result, input_params)
+
 
 
 # ----------
 # for performance testing
-    print 'full processing time - RUNTIME in sec: ',  time.time() - startTime1
-    print '**** D O N E ****', '\n'
+    print 'Full Processing Runtime in sec: ',  time.time() - startTime1, '\n'
+#    print '**** D O N E ****', '\n'
 
 
 #/************************************************************************/

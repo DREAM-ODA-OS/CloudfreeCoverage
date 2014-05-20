@@ -88,7 +88,7 @@ Coord: 3.5,3.6,43.3,43.4
 
 Brussel:
 Coord:  4.76,5.10,50.52,50.78
-/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a 4.76,5.10,50.52,50.78 -s T 20130616 -p 30 -o /home/schillerc/cs_pylib/spot4take5/tmp_spot
+/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a 4.76,5.10,50.52,50.78 -s T -t 20130616 -p 30 -o /home/schillerc/cs_pylib/spot4take5/tmp_spot
 
 
 Bretagne:  --> this dataset causes problems due to some input-files result in differernt sized output by WCS !!!
