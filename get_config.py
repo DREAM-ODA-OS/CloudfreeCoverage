@@ -1,5 +1,8 @@
 #!/usr/bin/env python 
+#
 #------------------------------------------------------------------------------
+# -*- coding: utf-8 -*-
+#-------------------------------------------------------------------------------
 #
 #
 #       read the default configuration file  -->  e.g. cloudless_config.cfg
@@ -10,7 +13,7 @@
 # Authors: Christian Schiller <christian dot schiller at eox dot at>
 #
 #-------------------------------------------------------------------------------
-# Copyright (C) 2013 EOX IT Services GmbH
+# Copyright (C) 2014 EOX IT Services GmbH
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

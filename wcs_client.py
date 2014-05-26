@@ -101,6 +101,13 @@ if temp_storage is None:
     temp_storage = cur_dir # +'/tmp'
 
 
+global file_ext
+file_ext = {'tiff': 'tif' ,
+            'jpeg': 'jpg' ,
+            'png': 'png', 
+            'gif': 'gif',
+            'x-netcdf': 'nc', 
+            'x-hdf': 'hdf' }
 
 
 #/************************************************************************/
@@ -358,7 +365,7 @@ class wcsClient(object):
             Returns:  XML GetCapabilities resonse
         """
        # print "I'm in "+sys._getframe().f_code.co_name
-        print input_params
+        #print input_params
         if input_params.has_key('updateSequence') and input_params['updateSequence'] is not None:
             res_in = self._valid_time_wrapper(list(input_params.get('updateSequence').split(',')))
             input_params['updateSequence'] = ','.join(res_in)
@@ -598,8 +605,8 @@ class wcsClient(object):
             Returns:  either XML response document  or  a list of coverageIDs
             Output: prints out the submitted http_request  or Error_XML in case of failure
         """
-      #  print "I'm in "+sys._getframe().f_code.co_name
-        # print http_request
+       # print "I'm in "+sys._getframe().f_code.co_name
+       # print http_request
 
         try:
                 # access the url
@@ -612,6 +619,10 @@ class wcsClient(object):
             if IDs_only == True:
                 cids = self._parse_xml(result_xml, self._xml_ID_tag[1])
                 request_handle.close()
+                # if no datasets are found return the XML
+                if len(cids) == 0 or cids is None:
+                    cids = result_xml
+                
                 return cids
             else:
                 request_handle.close()
@@ -666,25 +677,26 @@ class wcsClient(object):
             Returns:  HttpCode (if success)  
         """
        # print "I'm in "+sys._getframe().f_code.co_name
-        # print http_request
+       # print http_request
 
+        global file_ext
         now = time.strftime('_%Y%m%dT%H%M%S')
-        
- # TODO - this needs a better solution depending on ....?
-        if not (input_params['coverageID'].endswith('tif') or input_params['coverageID'].endswith('tiff') or \
-        input_params['coverageID'].endswith('Tif') or input_params['coverageID'].endswith('Tiff') or \
-        input_params['coverageID'].endswith('jpeg') or input_params['coverageID'].endswith('jpg') or \
-        input_params['coverageID'].endswith('gif')):
-## add this functionality again later - but with a switch to support/select it
-#            out_coverageID = input_params['coverageID']+now+'.'+input_params['format']
-            out_coverageID = input_params['coverageID']+'.'+input_params['format']
+       
+        if not input_params['coverageID'].endswith( ('tif','tiff','Tif','Tiff','TIFF','jpeg','jpg','png','gif','nc','hdf') ):
+            out_ext = file_ext.get( str(input_params['format'].lower()))
+            out_coverageID = input_params['coverageID']+'.'+out_ext
         else:
             out_coverageID = input_params['coverageID'] 
+
+        if input_params['coverageID'].endswith( ('tiff','Tiff','TIFF','jpeg') ):
+            out_ext = file_ext.get( str(input_params['coverageID'][-4:].lower()))
+            out_coverageID = input_params['coverageID'][:-4]+out_ext
+
             
         if input_params.has_key('output') and input_params['output'] is not None:
-            outfile = input_params['output']+dsep+out_coverageID
+            outfile = input_params['output']+out_coverageID
         else:
-            outfile = temp_storage+dsep+out_coverageID
+            outfile = temp_storage+out_coverageID
 
 
         try:

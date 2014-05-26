@@ -1,5 +1,8 @@
 #!/usr/bin/env python
+#
 #------------------------------------------------------------------------------
+# -*- coding: utf-8 -*-
+#-------------------------------------------------------------------------------
 #
 #
 #       Tool to generate cloudless products over a period of chosen time
@@ -33,8 +36,6 @@
 #-------------------------------------------------------------------------------
 #
 #
-# -*- coding: utf-8 -*-
-#-------------------------------------------------------------------------------
 
 
 
@@ -65,7 +66,6 @@ import wcs_client
 from get_config import get_config
 import tempfile
 import shutil
-#import urllib2,  socket
 from xml.dom import minidom
 
     # check for OS Platform and set the Directory-Separator to be used
@@ -73,14 +73,9 @@ global dsep
 dsep = os.sep
 
 
-# the default config file (use full path here) - all other config parameters
-# e.g. logging, dataset locations, etc. should be provided there
-#default_config_file = "/home/schillerc/cs_pylib/spot4take5/conf/cloudless_config.cfg"
+    # the default config file (use full path here) - all other config parameters
+    # e.g. logging, dataset locations, etc. should be provided there
 default_config_file = "/home/schillerc/cs_pylib/spot4take5/conf/cloudless_config.cfg"
-
-    # default timeout for all sockets (in case a requests hangs)
-#timeout = 180
-#socket.setdefaulttimeout(timeout)
 
     # XML search tags for the request responses
 xml_ID_tag = ['wcseo:DatasetSeriesId', 'wcs:CoverageId' ]
@@ -92,7 +87,7 @@ wcs = wcs_client.wcsClient()
 
 
 # ----------
-# for performance testing
+# for performance testing/evaluation
 startTime1 = time.time()
 
 
@@ -125,20 +120,21 @@ def usage():
     print "                                                c) input Dataset acts as bottom-layer (B), filling in clouded areas with pixels"
     print "                                                   from newer images"
     print "                                 [default=SUB]"
-    print "   -p|--period  <num days>   --  time period (number of days/images) to run the cloudless processing [optional, default=7]"
-    print "                                 a period of 10 days/images will usually be sufficient to achieve a good result."
+    print "   -p|--period <num days/img> --  time period (number of days(wcs)/images(local)) to run the cloudless processing [optional, default=7]"
+    print "                                  a period of 10 days/images will usually be sufficient to achieve a good result."
     print "   -b|--bands <'b1,b2,..bn'> --  list of bands to be processed e.g. '3,2,1'  [default = use all bands] "
     print "   -o|--output_dir           --  location to store the output/results (optional: -> but only for CLI usage) "
     print "   -k|--keep_temporary       --  do not delete the input files used for Cloudfree Product generation, but copy them "
     print "                                 to the output_dir"
 # TODO - not fully implemented yet
+# currenlty the cloudfree-routine doesn't pass these parameters to the wcs_client.py
 #    print "   -c|--output_crs           --  the EPSG code (epsg:number) of the desired output [default='epsg:4326'] "
-#    print "   -y|--output_datatype      --  the datatype of the desired output e.g. INT8, UINT16, FLOAT32 [default = same as input] "
 #    print "   -f|--output_format        --  output fileformat for the cloud-free product [default=GeoTiFF] "
 #    print "                                  - possible output formats:  GeoTiFF, (all formats supported by gdal as writable)"
 #    print "                                  - currently only GeoTiFF is supported"
 #    print "   -e|--extract  <FULL|SUB>  --  work on an extracted subset or use all datsets, as  full files, touched by the AOI"
 # TODO: @@  maybe we also should consider a WCS-server address as an input recieved from the WPS-server
+#    print "   -y|--output_datatype      --  the datatype of the desired output e.g. INT8, UINT16, FLOAT32 [default = same as input] "
     print " "
     print " "
     print "Example: ./create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s T -b 3,2,1 -p 90 "
@@ -146,17 +142,6 @@ def usage():
     sys.exit()
 
 
-#/************************************************************************/
-#/*                            do_interupt()                                     */
-#/************************************************************************/
-def do_interupt():
-    """
-        stop at call, to allow interactive usage with eg. iPython
-        and variable exploration for dubugging
-    """
-    import pdb #@@
-    pdb.set_trace() #@@
-    print 'stop here' #@@
 
 #/************************************************************************/
 #/*                            now()                                     */
@@ -239,13 +224,17 @@ def parse_xml(in_xml, tag):
 #/************************************************************************/
 
 def list_available_dss(target_server, printit):
+    """
+        provides a listing of all DatasetSeries and and their respective 
+        Coverage-Time-Ranges (Start-Stop) for all configured WCS servers
+    """
     print target_server
+    global wcs
 
-    #wcs = wcs_client.wcsClient()
     request = {'request': 'GetCapabilities', 
                'sections': 'DatasetSeriesSummary', 
                'server_url': target_server }
-    
+               
     getcap_xml = wcs.GetCapabilities(request)
 
     if getcap_xml is not None:
@@ -258,15 +247,13 @@ def list_available_dss(target_server, printit):
         return
 
 
-
-#### for logging and/or for debugging
     if printit is True:
-            # print the available DatasetSeriesIds to the screen
+            # prints the available DatasetSeriesIds and theri Coverage time-ranges to the screen
         print "The following DatasetSeries [Name: From-To] are available:"
         for i in range(len(dss_ids)):
             print " - ", dss_ids[i] , ": \t", dss_date1[i], " - ", dss_date2[i]
 
-    del wcs
+
 
 #/************************************************************************/
 #/*                              do_cleanup()                            */
@@ -276,15 +263,14 @@ def do_cleanup_tmp(temp_storage, cf_result, input_params):
         clean up the temporary storagespace  used during download and processing
     """
     if input_params['keep_temporary'] is False:
+        print 'Cleaning up temporary space...'
         if type(cf_result) is list:
             for elem in cf_result:
                 elem = os.path.basename(elem)
-                #shutil.copy2(temp_storage+dsep+elem, input_params['output_dir'])
                 shutil.copy2(temp_storage+dsep+elem, input_params['output_dir'])
     
         elif type(cf_result) is unicode or type(cf_result) is str:
             shutil.copy2(temp_storage+dsep+elem, input_params['output_dir'])
-    
     
     
         if os.path.exists(input_params['output_dir']+os.path.basename(cf_result[0])):
@@ -292,8 +278,6 @@ def do_cleanup_tmp(temp_storage, cf_result, input_params):
             for elem in cf_result:
                 if os.path.exists(input_params['output_dir']+os.path.basename(elem)):
                     print input_params['output_dir']+os.path.basename(elem)
-    #            if os.path.exists(input_params['output_dir']+os.path.basename(cf_result[2])):
-    #                print input_params['output_dir']+os.path.basename(cf_result[2])
     
               # remove all the temporay storage area
             shutil.rmtree(temp_storage, ignore_errors=True)        
@@ -314,6 +298,10 @@ def do_cleanup_tmp(temp_storage, cf_result, input_params):
 #/*                           do_print_flist()                           */
 #/************************************************************************/
 def do_print_flist(name, a_list):
+    """
+        prints a listing of the supplied filenames (eg. BaseImage, GapFillingProducts, 
+        and their respective Cloud-Mask filenames which are available/used)
+    """
     f_cnt = 1
 #    print name, len(list), type(list)
     for elem in a_list:
@@ -332,13 +320,12 @@ def get_cmdline():
                     'output_format': ]
     """
 
-# TODO: @@  maybe we also should consider a WCS-server address as an input recieved from the WPS-server
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hika:d:t:s:e:p:c:b:y:o:f:", ["help", "info", "aoi",
                     "time", "dataset", "scenario", "extract", "period", "crs", "bands", "datatype",
                     "output_dir", "output_format", "keep_temporary"])
     except getopt.GetoptError, err:
-        # print help information and exit - will print something like "option -x not recognized"
+            # print help information and exit - will print something like "option -x not recognized"
         print '[Error] -- ', now(), str(err)
         usage()
 
@@ -445,20 +432,16 @@ def get_cmdline():
 
 def main():
     """
-        Main function - processing the command-line inputs
+        Main function: 
+            calls the subfunction according to user input
     """
         # read in the default settings from the configuration file
     global settings
     settings = get_config(default_config_file)
-#        for k, v in settings.items():
-#            print k,' -- ', v
 
         # get all parameters provided via cmd-line
     global input_params
     input_params = get_cmdline()
-#        print 'I: ', input_params
-#        print 'S1: ', settings
-#        print 'S2: ', settings.keys(), ' ==== ', settings.values()
 
 
         # now that we know what dataset we need and where to find them, select the
@@ -471,22 +454,19 @@ def main():
         err_code = 3
         handle_error(err_msg, err_code)
 
-## @@ for debugging
-#    from IPython import embed  
-#    embed()  
 
         # call the reader module for the resepective dataset and process the data
     import dataset_reader
     attribute = getattr(dataset_reader, reader)
     f_read = attribute()
 
+    print 'READER: ', f_read        #@@
+    
         # gets a listing of available DatasetSeries and their corresponding time-range
     base_flist, base_mask_flist, gfp_flist, gfpmask_flist = f_read.get_filelist(input_params, settings)
 
-# @@ for debugging
-    #do_interupt()
 
-        # print the available datasets:  ?? during testing only
+        # print the available input datasets:  eg. during testing 
     do_print_flist('BASE', base_flist)
     do_print_flist('BASE_Mask', base_mask_flist)
     do_print_flist('GFP', gfp_flist)
@@ -500,6 +480,7 @@ def main():
     if temp_storage[-1] != dsep:
         temp_storage = temp_storage+dsep
 
+
     if len(base_flist) >= 1:
         f_read.base_getcover(base_flist, input_params, settings, temp_storage, mask=False)
 
@@ -508,29 +489,18 @@ def main():
 
     print 'BASE dataset_download - RUNTIME in sec: ',  time.time() - startTime1
 
-#
-## @@ TODO - the downloads shall be made one after the other and shall be immediately processed,
-## so that once the baseImg is cloudfree no unnecessary downloads are made
-## i.e. change these to a download-process-download loop
-#    if len(gfp_flist) >= 1:
-#        f_read.base_getcover(gfp_flist, input_params, settings, temp_storage, mask=False)
-#
-#    if len(gfpmask_flist) >= 1:
-#        f_read.base_getcover(gfpmask_flist, input_params, settings, temp_storage, mask=True)
-#
-##    print 'dataset_download - RUNTIME in sec: ',  time.time() - startTime1
 
         # call the Processor module for the resepective dataset and process the data
     import dataset_processor
     cfprocessor = 'CF_' + input_params['dataset'] + '_Processor'
     attribute = getattr(dataset_processor, cfprocessor)
     f_proc = attribute()
-    #cf_result = f_proc.process_clouds_1(base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage, f_read)
+
+    print 'PROCESSOR: ', f_proc        #@@
                 
     cf_result = f_proc.process_clouds_1(base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage, f_read)
 
 
-# @@ -- off during testing
         # copy results to output location and clean-up the temporary storage area
     do_cleanup_tmp(temp_storage, cf_result, input_params)
 
