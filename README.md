@@ -1,52 +1,24 @@
-EOxWCSClient
-============
-# Name:  wcs_client.py
+CloudfreeCoverage
+=================
+
+Create a cloud free coverage assembly from a series of existing satellite images
+
 #
-#   General purpose WCS 2.0/EO-WCS Client:
-#       This routine is inteded to be imported as modules.
-#       If cmd-line usage is desired use  "cmdline_wcs_client.py". It provides the 
-#       cmd-line interface to  "wcs_client.py". Full help is available from 
-#       "cmdline_wcs_client.py"  by running   "cmdline_wcs_client.py  --help"
 #
-#       The documentation of the modules functionality is provided as doc-strings.
+#       Tool to generate cloudless products over a period of chosen time
+#       e.g. 10-days from the existing products
 #
-#   This WCS-Client provides the following functionality:
-#         - GetCapabilities Request
-#         - DescribeCoverage Request
-#         - DescribeEOCoverageSet Request
-#         - GetMap Request
-#
-#         - return responses
-#         - download coverages
-#         - download time-series of coverages
-#
-#   It allows users to specify:
-#         + Server URL
-#         + Area of Interest (subset)
-#         + Time of Interest (time constrain)
-#         + DatasetSeries or Coverage
-#         + Rangesubsetting (eg. Bands)
-#         + File-Format (image format) for downloads
-#         + output CRS for downloads
-#         + mediatype
-#         + updateSequence
-#         + containment
-#         + section
-#         + count
-#         + interpolation
-#         + size or resolution
-#
-#   Additional (non-standard parameters implemented:
-#           + mask
-#           + IDs_only (DescribeEOCoverageSet returns only CoverageIDs - to be used for immediate download)
-#           + output (GetCoverage only - local location where downloaded files shall be written too)
+#       The routine can process local or WCS accessible imagery. Accessible datasets
+#       are configured in the ./conf/cloudless_config.cfg file.
+#       "create_cloudless.py"  provides extensive help on the possible com-line 
+#       parameters by running   create_cloudless.py --help
 #
 #
 #
-# Name:        wcs_client.py
-# Project:     DeltaDREAM
-# Author(s):   Christian Schiller <christian dot schiller at eox dot at>
-##
+# Project: DeltaDREAM
+# Name:    create_cloudless.py
+# Authors: Christian Schiller <christian dot schiller at eox dot at>
+#
 #-------------------------------------------------------------------------------
 # Copyright (C) 2014 EOX IT Services GmbH
 #
