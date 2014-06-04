@@ -11,13 +11,11 @@ are configured in the *./conf/cloudless_config.cfg*  file.
 parameters by running   *create_cloudless.py --help*
 
 #### Information
-Project: DeltaDREAM - funded by ESA contract
 
-Name:    *create_cloudless.py*
-
-Authors: Christian Schiller <christian dot schiller at eox dot at>
-
+Project:  DeltaDREAM - funded by ESA contract
+Name:     *create_cloudless.py*
 Copyright (C) 2014 EOX IT Services GmbH
+
 
 #### License
 Type:  MIT
