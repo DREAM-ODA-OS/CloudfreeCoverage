@@ -7,13 +7,16 @@ e.g. 10-days from the existing products
 
 - The routine can process local or WCS accessible imagery. Accessible datasets
 are configured in the *./conf/cloudless_config.cfg*  file.
-*create_cloudless.py*  provides extensive help on the possible cmd-line 
+- *create_cloudless.py*  provides extensive help on the possible cmd-line 
 parameters by running   *create_cloudless.py --help*
 
 #### Information
 Project: DeltaDREAM - funded by ESA contract
+
 Name:    *create_cloudless.py*
+
 Authors: Christian Schiller <christian dot schiller at eox dot at>
+
 Copyright (C) 2014 EOX IT Services GmbH
 
 #### License
