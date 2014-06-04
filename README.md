@@ -1,9 +1,6 @@
 ###CloudfreeCoverage
-=================
 
 Create a cloud free coverage assembly from a series of existing satellite images
-
-
 
 - Tool to generate cloudless products over a period of chosen time
 e.g. 10-days from the existing products
@@ -15,11 +12,11 @@ parameters by running   *create_cloudless.py --help*
 
 
 
- Project: DeltaDREAM
- Name:    *create_cloudless.py*
- Authors: Christian Schiller <christian dot schiller at eox dot at>
+Project: DeltaDREAM
+Name:    *create_cloudless.py*
+Authors: Christian Schiller <christian dot schiller at eox dot at>
 
--------------------------------------------------------------------------------
+
 Copyright (C) 2014 EOX IT Services GmbH
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -39,4 +36,4 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
--------------------------------------------------------------------------------
+
