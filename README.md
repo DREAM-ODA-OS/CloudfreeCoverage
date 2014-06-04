@@ -10,15 +10,14 @@ are configured in the *./conf/cloudless_config.cfg*  file.
 *create_cloudless.py*  provides extensive help on the possible cmd-line 
 parameters by running   *create_cloudless.py --help*
 
-
-
-Project: DeltaDREAM
+#### Information
+Project: DeltaDREAM - funded by ESA contract
 Name:    *create_cloudless.py*
 Authors: Christian Schiller <christian dot schiller at eox dot at>
-
-
 Copyright (C) 2014 EOX IT Services GmbH
 
+#### License
+Type:  MIT
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
