@@ -2,7 +2,7 @@
 
 Create a cloud free coverage assembly from a series of existing satellite images
 
-- Tool to generate cloudless products over a period of chosen time
+- Tool to generate cloudless setellite products over a period of chosen time
 e.g. 10-days from the existing products
 - The routine can process local or WCS accessible imagery. Accessible datasets
 are configured in the *./conf/cloudless_config.cfg*  file.

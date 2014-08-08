@@ -56,8 +56,6 @@ global dsep
 dsep = os.sep
 
 from create_cloudless import handle_error
-#from dataset_reader import getGdalDataType
-#from dataset_reader import getNumpyDataType
 
 
 #/************************************************************************/
@@ -184,13 +182,10 @@ class CFProcessor(object):
         inDim.append([baseImg.RasterYSize])
         inDim.append([baseImg.RasterCount])
         inDim.append([baseImg.GetDriver().ShortName])
-#        print 'read_mask - inDim: ', inDim
 
         inProj = baseImg.GetProjection()
-#        print 'read_mask - inProj: ', inProj
 
         inLocation = baseImg.GetGeoTransform()
-#        print 'read_mask - inLocation: ', inLocation
 
         inImg = gdal_array.LoadFile(infile)
         inImg.dtype
@@ -200,7 +195,6 @@ class CFProcessor(object):
         inClouds = np.array(np.where(inImg > 0))
 
         if inClouds[1].__len__() > 0 and isBaseImg == True:
-#            print 'inClouds :',inClouds[0:10][0:10]
             baseCoord = self.get_coordinates(inClouds, inDim, inLocation)
 
             return inDim, inProj, inLocation, inImg, inClouds, baseCoord
@@ -233,10 +227,6 @@ class CFProcessor(object):
 
             # add the file-format extension to the list of CoverageIDs
             # the filenames are already changed in:  dataset_reader.base_getcover 
-#        base_flist_e = [item+wcs_ext for item in base_flist if not item.endswith(wcs_ext) ]
-#        base_mask_flist_e = [item+wcs_ext for item in base_mask_flist]
-#        gfp_flist_e = [item+wcs_ext for item in gfp_flist]
-#        gfpmask_flist_e = [item+wcs_ext for item in gfpmask_flist]
         base_flist_e = [item+wcs_ext for item in base_flist if not item.lower().endswith(wcs_ext) ] or \
                        [item for item in base_flist if item.lower().endswith(wcs_ext) ]
         base_mask_flist_e = [item+wcs_ext for item in base_mask_flist if not item.lower().endswith(wcs_ext) ] or \
@@ -342,22 +332,7 @@ class CFProcessor(object):
             baseImgDt = getNumpyDataType(baseImgBand.DataType)
             gDType = getGdalDataType(baseImgDt)
 
-### TODO - change the following line to add support for other file formats --  also consider output_datatype!!
             driver = baseImg.GetDriver()
-# taken (mostly) from gdal tutorial:  but this needs additional checking to find the correct gdal-driver-name  eg. GTiff from tif
-#            format = "GTiff"
-#            driver = gdal.GetDriverByName( format )
-#            metadata = driver.GetMetadata()
-#            if metadata.has_key(gdal.DCAP_CREATE) and metadata[gdal.DCAP_CREATE] == 'YES':
-#                print 'Driver %s supports Create() method.' % format
-#            else:
-#                print 'gdal's does not Driver %s supports Create() method.' % format
-#            #if metadata.has_key(gdal.DCAP_CREATECOPY) \
-#            #   and metadata[gdal.DCAP_CREATECOPY] == 'YES':
-#            #    print 'Driver %s supports CreateCopy() method.' % format
-#            else:
-#                print 'gdal's does not Driver %s supports CreateCopy() method.' % format
-
 
                 # create the cloud-free output dataset
             outFile = infile_basef.rsplit(dsep, 1)
@@ -372,12 +347,6 @@ class CFProcessor(object):
 # @@ testing intermediary -> comment out the following line  --> see also below
             outImg = driver.Create((outFile[0]+dsep+outFile[1]), baseImgDim[0][0], baseImgDim[1][0], baseImgDim[2][0], gDType)
             
-
-### TODO -- an Alternative - which would also cover reprojection !!
-#  gdal.CreateAndReprojectImage(<source_dataset>, <output_filename>, src_wkt=<source_wkt>, dst_wkt=<output_wkt>,
-#        dst_driver=<Driver>, eResampleAlg=<GDALResampleAlg>)
-
-
                 # metadata mask & txt-file for storing the info about used (combined) datasets
             cur_ext = os.path.splitext(outFile[1])[1]
             metamaskTIF = outFile[1].replace(cur_ext, out_meta_mask)

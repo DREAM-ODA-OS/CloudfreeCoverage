@@ -39,23 +39,6 @@
 
 
 
-
-
-#### TODO:
-##        *) add check about returned size - all need to be equal
-##        *) add check/fallback if requested images do not contain bands requested (eg. fallback to band 1)
-##        *) add OUTPUT_CRS to user supplied input parameters (optional)
-##        *) add OUTPUT_FORMAT to user supplied input parameters (optional)
-##        *) add Output DataType - to specify if datsets shell be changed to a different Datatype
-##            eg. from 16-Bit Input to 8-Bit Output eg. for RGB image generation scenario [default = as Input]
-##        *) change description of period (from number of days to number of products) ???
-##        *) harmonize err_codes and sys.exit codes - and create a listing of their meanings
-##        *) add full log-file support
-##        *) maybe - allow the user to supply a SHP-file for data extraction (also KML, GML, GeoJason)
-##
-
-
-
 import sys
 import os
 import time
@@ -75,7 +58,8 @@ dsep = os.sep
 
     # the default config file (use full path here) - all other config parameters
     # e.g. logging, dataset locations, etc. should be provided there
-default_config_file = "/home/schillerc/cs_pylib/spot4take5/conf/cloudless_config.cfg"
+default_config_file =  os.path.abspath('.')+dsep+"conf"+dsep+"cloudless_config.cfg"
+
 
     # XML search tags for the request responses
 xml_ID_tag = ['wcseo:DatasetSeriesId', 'wcs:CoverageId' ]
@@ -303,7 +287,6 @@ def do_print_flist(name, a_list):
         and their respective Cloud-Mask filenames which are available/used)
     """
     f_cnt = 1
-#    print name, len(list), type(list)
     for elem in a_list:
         print  name, f_cnt,': ', elem
         f_cnt += 1

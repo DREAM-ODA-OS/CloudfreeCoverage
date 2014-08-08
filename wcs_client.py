@@ -185,8 +185,6 @@ class wcsClient(object):
            Returns:  a 2-element list of ISO-8601 formated dates
            Error:  if either, date is not valid or not in ISO-8601 format
         """
-       # print "I'm in "+sys._getframe().f_code.co_name
-
         outdate = []
         for d in indate_list:
             outdate.append(self._validate_date(d))
@@ -214,8 +212,6 @@ class wcsClient(object):
             _validate_date() is not intended to be called directly, only through the
             _valid_time_wrapper() function.
         """
-       # print "I'm in "+sys._getframe().f_code.co_name
-
         if indate.endswith('Z'):
             testdate = indate[:-1]
         else:
@@ -246,8 +242,6 @@ class wcsClient(object):
         """
             Returns the basic url components for any valid WCS request
         """
-      #  print "I'm in "+sys._getframe().f_code.co_name
-
         base_request = {'service': 'service=wcs',
                 'version': '&version=2.0.1'}
 
@@ -261,8 +255,6 @@ class wcsClient(object):
         """
             Returns the basic url components for a valid GetCapabilities request
         """
-       # print "I'm in "+sys._getframe().f_code.co_name
-
         base_cap = {'request': '&request=',
             'server_url': '',
             'updateSequence': '&updateSequence=',
@@ -279,8 +271,6 @@ class wcsClient(object):
         """
             Returns the basic urls components for a valid DescribeCoverage Request
         """
-      #  print "I'm in "+sys._getframe().f_code.co_name
-
         base_desccov = {'request': '&request=',
             'server_url': '',
             'coverageID': '&coverageID='}
@@ -295,8 +285,6 @@ class wcsClient(object):
         """
             Returns the basic urls components for a valid DescribeEOCoverageSet Request
         """
-       # print "I'm in "+sys._getframe().f_code.co_name
-
         base_desceocoverageset = {'request': '&request=',
             'server_url': '',
             'eoID': '&eoID=',
@@ -319,8 +307,6 @@ class wcsClient(object):
         """
            Rreturns the basic urls components for a GetCoverage Request
         """
-      #  print "I'm in "+sys._getframe().f_code.co_name
-
         getcov_dict = {'request': '&request=',
             'server_url': '',
             'coverageID': '&coverageid=',
@@ -364,8 +350,6 @@ class wcsClient(object):
                                'sections' : 'CoverageSummary' }
             Returns:  XML GetCapabilities resonse
         """
-       # print "I'm in "+sys._getframe().f_code.co_name
-        #print input_params
         if input_params.has_key('updateSequence') and input_params['updateSequence'] is not None:
             res_in = self._valid_time_wrapper(list(input_params.get('updateSequence').split(',')))
             input_params['updateSequence'] = ','.join(res_in)
@@ -398,8 +382,6 @@ class wcsClient(object):
                                'coverageid': 'some_Coverage_ID_yxyxyx_yxyxyx' }
             Returns:   XML DescribeCoverage response
         """
-      #  print "I'm in "+sys._getframe().f_code.co_name
-
         procedure_dict = self._set_base_desccov()
 
         http_request = self._create_request(input_params, procedure_dict)
@@ -447,8 +429,6 @@ class wcsClient(object):
                               'IDs_only': True }
             Returns:    XML DescribeEOCoverageSet response  or  only a list of available coverageIDs
         """
-       # print "I'm in "+sys._getframe().f_code.co_name
-
             # validate that the provided date/time stings are in ISO8601
         res_in = self._valid_time_wrapper(list(input_params.get('subset_time').split(',')))
         input_params['subset_time'] = ','.join(res_in)
@@ -526,8 +506,6 @@ class wcsClient(object):
                 
                 Return:      Nothing, but stores downloaded dataset(s) at user defined output location
         """
-      #  print "I'm in "+sys._getframe().f_code.co_name
-
             # provide the same functionality for input as for the cmd-line
             # (to get around the url-notation for input)
         if input_params['subset_x'].startswith('epsg'):
@@ -577,8 +555,6 @@ class wcsClient(object):
             This function is used when the the  IDs_only  parameter is supplied.
             Return:  List of available coverageIDs
         """
-      #  print "I'm in "+sys._getframe().f_code.co_name
-
             # parse the xml - received as answer to the request
         xmldoc = minidom.parseString(in_xml)
             # find all the tags (CoverageIds or DatasetSeriesIds)
@@ -605,13 +581,9 @@ class wcsClient(object):
             Returns:  either XML response document  or  a list of coverageIDs
             Output: prints out the submitted http_request  or Error_XML in case of failure
         """
-       # print "I'm in "+sys._getframe().f_code.co_name
-       # print http_request
-
         try:
                 # access the url
             request_handle = urllib2.urlopen(http_request)
-#            status = request_handle.code
                 # read the content of the url
             result_xml = request_handle.read()
 
@@ -631,19 +603,6 @@ class wcsClient(object):
         except urllib2.URLError, url_ERROR:
             if hasattr(url_ERROR, 'reason'):
                 print '\n', time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  Server not accessible -", url_ERROR.reason
-    # don't know to which location to write the data, so I just print it
-#                    # write out the servers return msg
-#                now = time.strftime('_%Y%m%dT%H%M%S')
-#                if input_params.has_key('output') and input_params['output'] is not None:
-#                    errfile = input_params['output']+dsep+'access_error'+now+'.xml'
-#                else:
-#                    outfile = temp_storage+dsep+'access_error'+now+'.xml'
-#
-#                access_err = open(errfile, 'w+b')
-#                access_err.write(url_ERROR.read())
-#                access_err.flush()
-#                access_err.close()
-                
                 
                 try:
                     print url_ERROR.read(), '\n'
@@ -676,9 +635,6 @@ class wcsClient(object):
                     saves Error-XML (-> access_error_"TimeStamp".xml) at output location (in case of failure)
             Returns:  HttpCode (if success)  
         """
-       # print "I'm in "+sys._getframe().f_code.co_name
-       # print http_request
-
         global file_ext
         now = time.strftime('_%Y%m%dT%H%M%S')
        
@@ -735,7 +691,7 @@ class wcsClient(object):
         except TypeError:
             pass
 
-        return #status
+        return
 
 
     #/************************************************************************/
@@ -746,8 +702,6 @@ class wcsClient(object):
             Merge and harmonize the input_params-dict with the required request-dict
             e.g. the base_getcov-dict
         """
-      #  print "I'm in "+sys._getframe().f_code.co_name
-
         request_dict = {}
         for k, v in input_params.iteritems():
            # print k,' -- ',v
@@ -775,8 +729,6 @@ class wcsClient(object):
         """
             Create the http-request according to the user selected Request-type
         """
-      #  print "I'm in "+sys._getframe().f_code.co_name
-
         request_dict = self._merge_dicts(input_params, procedure_dict)
 
             # this doesn't look nice, but this way I can control the order within the generated request

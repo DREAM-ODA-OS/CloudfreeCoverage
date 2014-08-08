@@ -51,8 +51,6 @@
 #-------------------------------------------------------------------------------
 #
 #
-## TODO: --  include/harmonize Error handling and printing of Error and other messages
-
 
 import sys
 import os
@@ -122,7 +120,6 @@ class Reader(object):
          - gathering information about filenames, dates, etc.
          - provide the listing of Base-files, Base-masks, GFP-files and GFP-masks to be used
     """
-
     def __init__(self):
         pass
 
@@ -158,7 +155,6 @@ class Reader(object):
         for elem in cov_list:
             idx = elem.find(input_params['toi'])
             if idx > -1:
-                #print idx,elem
                 b_cov = cov_list.pop(cnt)
                 base_flist.append(b_cov)
             cnt += 1
@@ -170,7 +166,6 @@ class Reader(object):
         for elem in mask_list:
             idx = elem.find(input_params['toi'])
             if idx > -1:
-                #print idx,elem
                 b_mask = mask_list.pop(cnt)
                 base_mask_flist.append(b_mask)
             cnt += 1
@@ -581,8 +576,6 @@ class CF_spot4take5_f_Reader(Reader):
     def __init__(self):
         Reader.__init__(self)
 
-## TODO -- need to add the time limitation for the resulting listings
-## CHECK - can't remember what I meant with this
 
     def get_maskname(self, filename):
         """
@@ -626,8 +619,7 @@ class CF_spot4take5_f_Reader(Reader):
         base_mask_flist = []
         gfp_flist = []
         gfpmask_flist = []
-#        base_fname_syntax = 'SPOT4_*' + target_date + '_N2A_AOT_*.TIF'
-#        gfp_fname_syntax = 'SPOT4_*_N2A_AOT_*.TIF'
+
         base_fname_syntax = 'SPOT4_*' + target_date + '*_PENTE_*.TIF'
         gfp_fname_syntax = 'SPOT4_*_PENTE_*.TIF'
 
@@ -734,10 +726,6 @@ class CF_landsat5_m_Reader(Reader):
         base_flist = sorted(findfile(acces_path, base_fname_syntax))
         gfp_flist = sorted(findfile(acces_path, gfp_fname_syntax))[0:input_params['period']]
 
-            # these parameters are mssing here - I guess they should also be crated, in order to be returned
-        #base_mask_flist =
-        #gfpmask_flist =
-
             # now remove any base_filenames from the gfp_flist, to avoid duplicates
         gfp_flist = [item for item in gfp_flist if not item in base_flist]
             # create the file-list for the mask-files
@@ -745,7 +733,6 @@ class CF_landsat5_m_Reader(Reader):
         base_mask_flist = self.get_maskname(base_flist)
         
         return base_flist, base_mask_flist, gfp_flist, gfpmask_flist
-        #return base_flist, gfp_flist
 
 #----
     def base_getcover(self, file_list, input_params, settings, temp_storage, mask):
