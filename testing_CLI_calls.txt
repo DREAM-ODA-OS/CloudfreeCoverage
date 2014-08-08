@@ -30,20 +30,20 @@ Example: create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s 
 
 #
 # some (example) calls on the cmd-line to test the create_cloudless.py from the CLI interface
-#
+# 
 
-# workig/program directory is:  /home/schillerc/cs_pylib/spot4take5
+# workig/program directory is:  $HOME/cs_pylib/spot4take5
 
 # spot4take5 (local)
-./create_cloudless.py -d  spot4take5_f -a 12,15,45,48 -t 20130520 -s T -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
-./create_cloudless.py -d  spot4take5_f -a 12,15,45,48 -t 20110513 -s T -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
+./create_cloudless.py -d  spot4take5_f -a 12,15,45,48 -t 20130520 -s T -p 10 -o $HOME/cs_pylib/spot4take5/tmp
+./create_cloudless.py -d  spot4take5_f -a 12,15,45,48 -t 20110513 -s T -p 10 -o $HOME/cs_pylib/spot4take5/tmp
 
 
 
 
 
 #landsat5 (local)
-./create_cloudless.py -d  landsat5_f -a 22,44,66,99 -t 20110529 -s T -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
+./create_cloudless.py -d  landsat5_f -a 22,44,66,99 -t 20110529 -s T -p 10 -o $HOME/cs_pylib/spot4take5/tmp
 ./create_cloudless.py -a 22,44,66,99 -t 20110529 -d landsat5_f -p 15
 ./create_cloudless.py -a 22,44,66,99 -t 20110529 -d landsat5_m
 
@@ -53,29 +53,29 @@ Example: create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s 
 
 
 #cryoland (wcs)
-./create_cloudless.py -d cryoland -a 12,15,45,48 -t 20130520 -s T -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
-./create_cloudless.py -d cryoland -a 12,15,45,48 -t 20130520 -s B -p 15 -o /home/schillerc/cs_pylib/spot4take5/tmp
-./create_cloudless.py -d cryoland -a 12,15,45,48 -t 20130520 -s M -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
+./create_cloudless.py -d cryoland -a 12,15,45,48 -t 20130520 -s T -p 10 -o $HOME/cs_pylib/spot4take5/tmp
+./create_cloudless.py -d cryoland -a 12,15,45,48 -t 20130520 -s B -p 15 -o $HOME/cs_pylib/spot4take5/tmp
+./create_cloudless.py -d cryoland -a 12,15,45,48 -t 20130520 -s M -p 10 -o $HOME/cs_pylib/spot4take5/tmp
 
 ipython --deep-reload -i
-%run /home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d cryoland -a 12,15,45,48 -t 20130520 -s T -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
+%run $HOME/cs_pylib/spot4take5/create_cloudless.py -d cryoland -a 12,15,45,48 -t 20130520 -s T -p 10 -o $HOME/cs_pylib/spot4take5/tmp
 
 
 
 # from cmd-line
 
 # full bandset, larger, 30days, T
-/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 3.2,3.7,43.1,43.6 -t 20110513 -s T -p 30 -o /home/schillerc/cs_pylib/spot4take5/tmp
+$HOME/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 3.2,3.7,43.1,43.6 -t 20110513 -s T -p 30 -o $HOME/cs_pylib/spot4take5/tmp
 
 
-/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 2,3,43,44 -t 20110520 -s T -p 10 -o /home/schillerc/cs_pylib/spot4take5/tmp
+$HOME/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 2,3,43,44 -t 20110520 -s T -p 10 -o $HOME/cs_pylib/spot4take5/tmp
 
 # band subsetting (321 bzw. 123), 60days (T/B/M)
-/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s T -p 60 -o /home/schillerc/cs_pylib/spot4take5/tmp -b 3,2,1
+$HOME/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s T -p 60 -o $HOME/cs_pylib/spot4take5/tmp -b 3,2,1
 
-/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s B -p 60 -o /home/schillerc/cs_pylib/spot4take5/tmp -b 3,2,1
+$HOME/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s B -p 60 -o $HOME/cs_pylib/spot4take5/tmp -b 3,2,1
 
-/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s M -p 60 -o /home/schillerc/cs_pylib/spot4take5/tmp -b 3,2,1
+$HOME/cs_pylib/spot4take5/create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s M -p 60 -o $HOME/cs_pylib/spot4take5/tmp -b 3,2,1
 
 
 
@@ -84,18 +84,18 @@ Dataset:  spot4take5_n2a_pente / spot4take5_n2a_nua
 
 Gulf of Lyon: 
 Coord: 3.5,3.6,43.3,43.4
-/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a 3.5,3.6,43.3,43.4 -t 20130227 -s T -p 30 -o /home/schillerc/cs_pylib/spot4take5/tmp_spot 
+$HOME/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a 3.5,3.6,43.3,43.4 -t 20130227 -s T -p 30 -o $HOME/cs_pylib/spot4take5/tmp_spot 
 
 Brussel:
 Coord:  4.76,5.10,50.52,50.78
-/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a 4.76,5.10,50.52,50.78 -s T -t 20130616 -p 30 -o /home/schillerc/cs_pylib/spot4take5/tmp_spot
+$HOME/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a 4.76,5.10,50.52,50.78 -s T -t 20130616 -p 30 -o $HOME/cs_pylib/spot4take5/tmp_spot
 
 
 Bretagne:  --> this dataset causes problems due to some input-files result in differernt sized output by WCS !!!
 Coord: -2.8,47.5,-2.6,47.7
-/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a -2.7,-2.6,47.6,47.7 -t 20130211 -s T -p 60 -o /home/schillerc/cs_pylib/spot4take5/tmp_spot 
+$HOME/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a -2.7,-2.6,47.6,47.7 -t 20130211 -s T -p 60 -o $HOME/cs_pylib/spot4take5/tmp_spot 
 
-/home/schillerc/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a -2.7,-2.6,47.6,47.7 -t 20130211 -s B -p 60 -o /home/schillerc/cs_pylib/spot4take5/tmp_spot 
+$HOME/cs_pylib/spot4take5/create_cloudless.py -d spot4take5_n2a_pente -a -2.7,-2.6,47.6,47.7 -t 20130211 -s B -p 60 -o $HOME/cs_pylib/spot4take5/tmp_spot 
 
 
 
