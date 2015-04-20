@@ -157,11 +157,55 @@ def now():
 def handle_error(err_msg, err_code):
     """
         prints out the error_msg and err_code and exit
-        Mainly used during debugging
     """
-    print err_msg, err_code
+    #print err_msg, err_code
+    lmsg = err_msg, err_code
+    print_log(settings, lmsg)
 #    usage()
     sys.exit(err_code)
+
+
+#/************************************************************************/
+#/*                           set_logging()                              */
+#/************************************************************************/
+def set_logging():
+    """
+        set logging output according to configuration -> either to the 
+        screen or to a files
+    """
+    global settings
+    if settings['logging.log_type'] == 'screen':
+        log_fsock = sys.stdout
+    if settings['logging.log_type'] == 'file':
+        if settings['logging.log_file'] is None or settings['logging.log_file'] is '':
+            err_msg = 'Error - there is no log-file location provided in the the config-file'
+            handle_error(err_msg, 10)
+        log_fsock = open(settings['logging.log_file'], 'a')
+            # also write the stderr to the logfile (in anycase)
+            # comment out next line if errors should go to screen and not to log-file
+        sys.stderr = log_fsock
+
+    
+    #return log_fsock
+    settings['logging.log_fsock'] = log_fsock
+
+
+#/************************************************************************/
+#/*                        print_log()                                   */
+#/************************************************************************/
+def print_log(settings, msg):
+    """
+        writes log-output 
+    """
+    print type(msg)
+    if msg.__class__ is str or msg.__class__ is unicode:
+       print >> settings['logging.log_fsock']  , msg
+    else:
+        for elem in msg: 
+            print >> settings['logging.log_fsock']  , "%s" % elem,
+    
+        print >> settings['logging.log_fsock'] ,''
+
 
 
 #/************************************************************************/
@@ -262,7 +306,8 @@ def do_cleanup_tmp(temp_storage, cf_result, input_params, settings):
         clean up the temporary storagespace  used during download and processing
     """
     if input_params['keep_temporary'] is False:
-        print 'Cleaning up temporary space...'
+        lmsg = 'Cleaning up temporary space...'
+        print_log(settings, lmsg)
         if type(cf_result) is list:
             for elem in cf_result:
                 elem = os.path.basename(elem)
@@ -273,21 +318,26 @@ def do_cleanup_tmp(temp_storage, cf_result, input_params, settings):
     
     
         if os.path.exists(input_params['output_dir']+os.path.basename(cf_result[0])):
-            print '[Info] -- The Cloudfree dataset has been generated and is available at: '
+            lmsg = '[Info] -- The Cloudfree dataset has been generated and is available at: '
+            print_log(settings, lmsg)
             for elem in cf_result:
                 if os.path.exists(input_params['output_dir']+os.path.basename(elem)):
-                    print input_params['output_dir']+os.path.basename(elem)
+                    lmsg =  input_params['output_dir']+os.path.basename(elem)
+                    print_log(settings, lmsg)
     
               # remove all the temporay storage area
             shutil.rmtree(temp_storage, ignore_errors=True)        
         else:
-            print '[Error] -- The generated Cloudfree output-file could not be written to: ', input_params['output_dir']+os.path.basename(cf_result)
+            lmsg = '[Error] -- The generated Cloudfree output-file could not be written to: ', input_params['output_dir']+os.path.basename(cf_result)
+            print_log(settings, lmsg)
             sys.exit(7) 
 
     else:
-        print temp_storage[:-1]
+        lmsg = temp_storage[:-1]
+        print_log(settings, lmsg)
         out_location = input_params['output_dir']+os.path.basename(temp_storage[:-1])
-        print '[Info] -- The Cloudfree dataset and the input files are available at: ', out_location
+        lmsg = '[Info] -- The Cloudfree dataset and the input files are available at: ', out_location
+        print_log(settings, lmsg)
         
         shutil.move(temp_storage, input_params['output_dir'])
 
@@ -303,7 +353,8 @@ def do_print_flist(name, a_list):
     """
     f_cnt = 1
     for elem in a_list:
-        print  name, f_cnt,': ', elem
+        lmsg =  name, f_cnt,': ', elem
+        print_log(settings, lmsg)
         f_cnt += 1
 
 
@@ -467,7 +518,8 @@ def cnv_output(cf_result, input_params, settings):
     if supported_ext.has_key(input_params['output_format']):  
         out_ext = supported_ext.get(input_params['output_format'])
 
-    print 'Converting -- CF_image and CF_mask to:   ' + input_params['output_format'] + '  [ *' + out_ext + ']'
+    lmsg = 'Converting -- CF_image and CF_mask to:   ' + input_params['output_format'] + '  [ *' + out_ext + ']'
+    print_log(settings, lmsg)
     
     if input_params['output_format'] == 'GTIFF':
         tr_params1 = ""
@@ -511,6 +563,11 @@ def main():
     global settings
     settings = get_config(default_config_file)
     
+        # set the logging output i.e. to a File or the screen
+    #log_fsock = set_logging(settings)
+    #set_logging(settings)
+    set_logging()
+
         # get all parameters provided via cmd-line
     global input_params
     input_params = get_cmdline()
@@ -545,7 +602,8 @@ def main():
     do_print_flist('GFP_Mask', gfpmask_flist)
 
 
-    print 'Dataset_listing - RUNTIME in sec: ',  time.time() - startTime1
+    lmsg = 'Dataset_listing - RUNTIME in sec: ',  time.time() - startTime1
+    print_log(settings, lmsg)
         # create a temporarylocation under the provided settings['general.def_temp_dir'] to be used
         # for the temporary storage during processing
     temp_storage = tempfile.mkdtemp(prefix='cloudfree_',dir=settings['general.def_temp_dir'])
@@ -559,7 +617,8 @@ def main():
     if len(base_mask_flist) >= 1:
         f_read.base_getcover(base_mask_flist, input_params, settings, temp_storage, mask=True)
 
-    print 'BASE dataset_download - RUNTIME in sec: ',  time.time() - startTime1
+    lmsg = 'BASE dataset_download - RUNTIME in sec: ',  time.time() - startTime1 #, '\n'
+    print_log(settings, lmsg)
 
 
         # call the Processor module for the resepective dataset and process the data
@@ -586,8 +645,12 @@ def main():
 
 # ----------
 # for performance testing
-    print 'Full Processing Runtime in sec: ',  time.time() - startTime1, '\n'
+    msg = 'Full Processing Runtime in sec: ',  time.time() - startTime1, '\n' 
+    print_log(settings, msg)
+
+    settings['logging.log_fsock'].close()
 #    print '**** D O N E ****', '\n'
+
 
 
 
