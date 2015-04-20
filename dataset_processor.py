@@ -314,7 +314,7 @@ class CFProcessor(object):
         """
             replace clouded pixels with non-clouded pixels
             write out cloud-free product, metadata-maskfile and metadata-textfile (of used products)
-            option using full file reading (faster, but higher memory usage)
+            option uses full file reading (which is faster, but has higher memory usage)
         """
         out_prefix = 'CF_'
         img_cnt = 1

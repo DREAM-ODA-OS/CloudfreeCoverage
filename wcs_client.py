@@ -76,6 +76,10 @@ import time, datetime
 import urllib2, socket
 from xml.dom import minidom
 
+
+
+
+
 global __version__
 __version__ = '0.1'
 
@@ -350,12 +354,15 @@ class wcsClient(object):
                                'sections' : 'CoverageSummary' }
             Returns:  XML GetCapabilities resonse
         """
+        
         if input_params.has_key('updateSequence') and input_params['updateSequence'] is not None:
             res_in = self._valid_time_wrapper(list(input_params.get('updateSequence').split(',')))
             input_params['updateSequence'] = ','.join(res_in)
 
         procedure_dict = self._set_base_cap()
         http_request = self._create_request(input_params, procedure_dict)
+
+        # print http_request   #@@
         result_xml = wcsClient._execute_xml_request(self, http_request)
 
         return result_xml
@@ -383,8 +390,9 @@ class wcsClient(object):
             Returns:   XML DescribeCoverage response
         """
         procedure_dict = self._set_base_desccov()
-
         http_request = self._create_request(input_params, procedure_dict)
+       
+        # print http_request   #@@        
         result_xml = wcsClient._execute_xml_request(self, http_request)
 
         return result_xml
@@ -435,7 +443,8 @@ class wcsClient(object):
 
         procedure_dict = self._set_base_desceocoverageset()
         http_request = self._create_request(input_params, procedure_dict)
-
+      
+        # print http_request   #@@        
         if input_params.has_key('IDs_only') and input_params['IDs_only'] == True:
             result_list = wcsClient._execute_xml_request(self, http_request, IDs_only=True)
         else:
@@ -539,7 +548,8 @@ class wcsClient(object):
 
         procedure_dict = self._set_base_getcov()
         http_request = self._create_request(input_params, procedure_dict)
-
+       
+        # print http_request   #@@        
         result = wcsClient._execute_getcov_request(self, http_request, input_params)
 
         return result

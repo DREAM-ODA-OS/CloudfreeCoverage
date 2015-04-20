@@ -50,6 +50,9 @@ from get_config import get_config
 import tempfile
 import shutil
 from xml.dom import minidom
+from osgeo import gdal
+
+
 
     # check for OS Platform and set the Directory-Separator to be used
 global dsep
@@ -69,6 +72,10 @@ xml_date_tag = ['gml:beginPosition',  'gml:endPosition']
 global wcs
 wcs = wcs_client.wcsClient()
 
+# indicator that:  output_format  and/or  output_datatype   has been set at the cmd-line
+# and a conversion of the results is needed
+change_output = False
+
 
 # ----------
 # for performance testing/evaluation
@@ -86,7 +93,7 @@ def usage():
     print ""
     print "Usage: create_cloudless.py  [-d|--dataset] <dataset>  [-a|--aoi] <'minx,maxx,miny,maxy'>  [-t|--time] <startdate> "
     print "                  ([-s|--scenario] <T|M|B>) ([-p|--period] <num_days>) (-b|--bands <list_of_bands>) "
-    print "                  (-o|--output_dir <target_path>) (-l|--keep_temporary) "
+    print "                  (-o|--output_dir <target_path>) (-k|--keep_temporary) "
     print " "
     print "  Tool to generate cloudless products over a period of X-days from the existing products. The processing ends after X-days"
     print "  or when no more clouds are present."
@@ -95,6 +102,7 @@ def usage():
     print "   -a|--aoi <'maxx,minx,maxy,miny'>  --  the Area of Interest (AOI), with the coordinates of the BoundingBox, provided as"
     print "                                          the corner coordinates in Degrees (WGS84, Lat/Lon)"
     print "   -t|--time <startdate>     --  Starttime - Date of the image to start with in ISO-Format e.g. '20120423' "
+    print "   -o|--output_dir           --  location to store the output/results "    
     print "  OPTIONAL parameters: "
     print "   -h|--help                 --  This help information"
     print "   -i|--info                 --  Information about available DatasetSeries (result of GetCapability-DatasetSeriesSummary requests)"
@@ -107,24 +115,29 @@ def usage():
     print "   -p|--period <num days/img> --  time period (number of days(wcs)/images(local)) to run the cloudless processing [optional, default=7]"
     print "                                  a period of 10 days/images will usually be sufficient to achieve a good result."
     print "   -b|--bands <'b1,b2,..bn'> --  list of bands to be processed e.g. '3,2,1'  [default = use all bands] "
-    print "   -o|--output_dir           --  location to store the output/results (optional: -> but only for CLI usage) "
     print "   -k|--keep_temporary       --  do not delete the input files used for Cloudfree Product generation, but copy them "
     print "                                 to the output_dir"
-# TODO - not fully implemented yet
-# currenlty the cloudfree-routine doesn't pass these parameters to the wcs_client.py
-#    print "   -c|--output_crs           --  the EPSG code (epsg:number) of the desired output [default='epsg:4326'] "
-#    print "   -f|--output_format        --  output fileformat for the cloud-free product [default=GeoTiFF] "
-#    print "                                  - possible output formats:  GeoTiFF, (all formats supported by gdal as writable)"
-#    print "                                  - currently only GeoTiFF is supported"
+    print "   -c|--output_crs           --  the EPSG code (epsg:number) of the desired output [default='epsg:4326'] "
+    print "   -f|--output_format        --  output fileformat for the cloud-free product [default=GeoTiFF] "
+    print "                                  - possible output formats:  all formats supported by gdal as writable) "
+    print "                                  - for listing use:   ./create_cloudless.py  --help_formats "
+    print "   -y|--output_datatype      --  the datatype of the desired output [default = same as input];  Valids are:  Byte/Int16/ "
+    print "                                 UInt16/UInt32/Int32/Float32/Float64/CInt16/CInt32/CFloat32/CFloat64 "
+# TODO: @@ - maybe we also should consider a WCS-server address as an input recieved from the WPS-server
 #    print "   -e|--extract  <FULL|SUB>  --  work on an extracted subset or use all datsets, as  full files, touched by the AOI"
-# TODO: @@  maybe we also should consider a WCS-server address as an input recieved from the WPS-server
-#    print "   -y|--output_datatype      --  the datatype of the desired output e.g. INT8, UINT16, FLOAT32 [default = same as input] "
     print " "
     print " "
-    print "Example: ./create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s T -b 3,2,1 -p 90 "
+    print "Example: ./create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s T -b 3,2,1 -p 90 -o ./out "
     print " "
     sys.exit()
 
+
+#/************************************************************************/
+#/*                         help_formats()                               */
+#/************************************************************************/
+def help_formats():
+    os.system('gdal_translate --formats |grep "(rw"')
+    sys.exit()
 
 
 #/************************************************************************/
@@ -204,7 +217,7 @@ def parse_xml(in_xml, tag):
 
 
 #/************************************************************************/
-#/*                               get_available_dss()                              */
+#/*                               get_available_dss()                    */
 #/************************************************************************/
 
 def list_available_dss(target_server, printit):
@@ -212,11 +225,11 @@ def list_available_dss(target_server, printit):
         provides a listing of all DatasetSeries and and their respective 
         Coverage-Time-Ranges (Start-Stop) for all configured WCS servers
     """
-    print target_server
+    #print target_server
     global wcs
-
+    
     request = {'request': 'GetCapabilities', 
-               'sections': 'DatasetSeriesSummary', 
+               'sections': 'DatasetSeriesSummary,ServiceIdentification', 
                'server_url': target_server }
                
     getcap_xml = wcs.GetCapabilities(request)
@@ -225,6 +238,8 @@ def list_available_dss(target_server, printit):
         dss_ids = parse_xml(getcap_xml, xml_ID_tag[0])
         dss_date1 = parse_xml(getcap_xml, xml_date_tag[0])
         dss_date2 = parse_xml(getcap_xml, xml_date_tag[1])
+
+        
     else:
         err_msg = 'Server not responding -- Skipping...'
         print err_msg
@@ -242,7 +257,7 @@ def list_available_dss(target_server, printit):
 #/************************************************************************/
 #/*                              do_cleanup()                            */
 #/************************************************************************/
-def do_cleanup_tmp(temp_storage, cf_result, input_params):
+def do_cleanup_tmp(temp_storage, cf_result, input_params, settings):
     """
         clean up the temporary storagespace  used during download and processing
     """
@@ -302,11 +317,11 @@ def get_cmdline():
                     'in_extract':, 'in_period':, 'in_output_crs':, 'in_bands':, 'in_output_datatype':, 'in_output_dir':,
                     'output_format': ]
     """
-
+    global change_output
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hika:d:t:s:e:p:c:b:y:o:f:", ["help", "info", "aoi",
                     "time", "dataset", "scenario", "extract", "period", "crs", "bands", "datatype",
-                    "output_dir", "output_format", "keep_temporary"])
+                    "output_dir", "output_format", "keep_temporary", "help_formats"])
     except getopt.GetoptError, err:
             # print help information and exit - will print something like "option -x not recognized"
         print '[Error] -- ', now(), str(err)
@@ -328,10 +343,16 @@ def get_cmdline():
     }
     
 
+    if  (len(sys.argv[1:]) == 0):
+        usage()
+        
 
     for opt, arg in opts:
         if opt in ("-h", "--help", "-help", "help"):
             usage()
+        
+        elif opt in ("--help_formats"):
+            help_formats()
 
         elif opt in ("-i", "--info", "-info", "info"):
             print '==== You requested DatasetSeries information from all configured Servers ===='
@@ -364,13 +385,19 @@ def get_cmdline():
             input_params['scenario'] = str.upper(arg)
 
         elif opt in ("-e","--extract"):
-            input_params['extract'] = str.lower(arg)
+            input_params['extract'] = str.upper(arg)
 
         elif opt in ("-p","--period"):
             input_params['period'] = int(arg)
 
-        elif opt in ("-c","--crs"):
-            input_params['output_crs'] = arg
+        elif opt in ("-o","--output_dir"):
+            if arg is None:
+                print "[Error] -- '-o <output_directory>' is a required input parameter"
+                usage()
+            else: 
+                input_params['output_dir'] = arg
+                if input_params['output_dir'][-1] != dsep:
+                    input_params['output_dir'] = input_params['output_dir']+dsep
 
         elif opt in ("-b","--bands"):
             if arg.count(',') > 0 or len(arg) == 1:
@@ -379,16 +406,19 @@ def get_cmdline():
                 err_msg = '[Error] -- supplied Band parameters cannot be handled: ', opt, arg
                 handle_error(err_msg, 2)
 
+        elif opt in ("-c","--crs"):
+            input_params['output_crs'] = arg
+
         elif opt in ("-y","--datatype"):
             input_params['output_datatype'] = str.lower(arg)
-
-        elif opt in ("-o","--output_dir"):
-            input_params['output_dir'] = arg
-            if input_params['output_dir'][-1] != dsep:
-                input_params['output_dir'] = input_params['output_dir']+dsep
+            change_output = True
 
         elif opt in ("-f", "--output_format"):
             input_params['output_format'] = str.lower(arg)
+            change_output = True
+            input_params['output_format'] = str.upper(arg)
+            change_output = True
+            
         elif opt in ("-k","--keep_temporary"):
             input_params['keep_temporary'] = True
 
@@ -402,11 +432,70 @@ def get_cmdline():
     if input_params['scenario'] is None:    input_params['scenario'] = str.upper(settings['general.def_scenario'])
     if input_params['output_crs'] is None:    input_params['output_crs'] = settings['general.def_output_crs']
     if input_params['output_datatype'] is None:    input_params['output_datatype'] = str.lower(settings['general.def_output_datatype'])
-    if input_params['output_format'] is None:    input_params['output_format'] = str.lower(settings['general.def_output_format'])
+    if input_params['output_format'] is None:    input_params['output_format'] = str.upper(settings['general.def_output_format'])
     if input_params['extract'] is None:    input_params['extract'] = str.lower(settings['general.def_extract'])
 
+        # check that all required parameters are supplied
+    if input_params['dataset'] is None: 
+        print "\n[Error] -- '-d <dataset>' is a required input parameter"
+        usage()
+    if input_params['aoi'] is None: 
+        print "\n[Error] -- '-a <aoi>' is a required input parameter"
+        usage()
+    if input_params['toi'] is None: 
+        print "\n[Error] -- '-t <time>' is a required input parameter"
+        usage()
+    if input_params['output_dir'] is None:  
+        print "\n[Error] -- '-o <output_directory>' is a required input parameter"
+        usage()
+    
     return input_params
 
+#/************************************************************************/
+#/*                           cnv_output()                               */
+#/************************************************************************/
+def cnv_output(cf_result, input_params, settings):
+    """
+        convert the resulting CF_image and CF_Mask accoring to the user requested
+        output_crs, output_format, output_datatype 
+        
+    """
+    # @@
+    supported_ext =  {'VRT': '.vrt', 'GTIFF': '.tif', 'NITF': '.nitf', 'HFA': '.img', 'ELAS': '.ELAS', 'AAIGRID': '.grd', 'DTED': '.DTED', 'PNG': '.png', 'JPEG': '.jpg', 'MEM': '.mem', 'GIF': '.gif', 'XPM': '.xpm', 'BMP': '.bmp', 'PCIDSK': '.PCIDSK', 'PCRASTER': '.PCRaster', 'ILWIS': '.ilw', 'SGI': '.sgi', 'SRTMHGT': '.SRTMHGT', 'LEVELLER': '.Leveller', 'TERRAGEN': '.Terragen', 'GMT': '.gmt', 'NETCDF': '.nc', 'HDF4IMAGE': '.hdf', 'ISIS2': '.ISIS2', 'ERS': '.ers', 'FIT': '.fit', 'JPEG2000': '.jp2', 'RMF': '.rmf', 'WMS ':'.WMS', 'RST': '.rst', 'INGR': '.INGR', 'GSAG': '.grd', 'GSBG': '.grd', 'GS7BG': '.grd', 'R': '.r', 'PNM':  '.pnm', 'ENVI': '.img', 'EHDR': '.hdr', 'PAUX': '.aux', 'MFF':  '.mff', 'MFF2': '.mff2', 'BT':   '.bt', 'LAN': '.lan', 'IDA': '.ida', 'LCP': '.lcp', 'GTX': '.GTX', 'NTV2': '.NTv2', 'CTABLE2': '.CTable2', 'KRO': '.KRO', 'ARG': '.ARG', 'USGSDEM': '.USGDEM', 'ADRG': '.img', 'BLX': '.blx', 'RASTERLITE': '.Rasterlite', 'EPSILON': '.Epsilon', 'POSTGISRASTER': '.PostGISRaster', 'SAGA': '.sdat', 'KMLSUPEROVERLAY': '.kmlovl', 'XYZ': '.xyz', 'HF2': '.HF2', 'PDF': '.pdf', 'WEBP': '.webp', 'ZMAP': '.ZMap'}
+
+
+    if supported_ext.has_key(input_params['output_format']):  
+        out_ext = supported_ext.get(input_params['output_format'])
+
+    print 'Converting -- CF_image and CF_mask to:   ' + input_params['output_format'] + '  [ *' + out_ext + ']'
+    
+    if input_params['output_format'] == 'GTIFF':
+        tr_params1 = ""
+    else: tr_params1 = " -of " + str(input_params['output_format'])
+    
+         
+    if input_params['output_datatype'] == 'input': 
+        tr_params2 = ""
+    else: tr_params2 = " -ot " + str(input_params['output_datatype'])
+    
+    tr_params = tr_params1 + tr_params2
+
+    #print  tr_params + " " + input_params['output_dir'] + cf_result[0] + " " + input_params['output_dir'] + cf_result[0][:-4]+out_ext
+
+
+
+    res = os.system("gdal_translate " + tr_params + " " + input_params['output_dir'] + cf_result[0] + " " + input_params['output_dir'] + cf_result[0][:-4]+out_ext )
+    if res is 0: 
+        os.remove(input_params['output_dir'] + cf_result[0])
+    else:
+        err_msg = '[Error] - CF_image could not be converted'
+        handle_error(err_msg, res)
+    res = os.system("gdal_translate " + tr_params + " " + input_params['output_dir'] + cf_result[1] + " " + input_params['output_dir'] + cf_result[1][:-4]+out_ext )
+    if res is 0: 
+        os.remove(input_params['output_dir'] + cf_result[1])
+    else:
+        err_msg = '[Error] - CF_mask could not be converted'
+        handle_error(err_msg, res)
 
 
 #/************************************************************************/
@@ -421,7 +510,7 @@ def main():
         # read in the default settings from the configuration file
     global settings
     settings = get_config(default_config_file)
-
+    
         # get all parameters provided via cmd-line
     global input_params
     input_params = get_cmdline()
@@ -443,7 +532,7 @@ def main():
     attribute = getattr(dataset_reader, reader)
     f_read = attribute()
 
-    print 'READER: ', f_read        #@@
+    #print 'READER: ', f_read       #@@
     
         # gets a listing of available DatasetSeries and their corresponding time-range
     base_flist, base_mask_flist, gfp_flist, gfpmask_flist = f_read.get_filelist(input_params, settings)
@@ -479,13 +568,19 @@ def main():
     attribute = getattr(dataset_processor, cfprocessor)
     f_proc = attribute()
 
-    print 'PROCESSOR: ', f_proc        #@@
+   #print 'PROCESSOR: ', f_proc        #@@
                 
     cf_result = f_proc.process_clouds_1(base_flist, base_mask_flist, gfp_flist, gfpmask_flist, input_params, settings, temp_storage, f_read)
 
 
         # copy results to output location and clean-up the temporary storage area
-    do_cleanup_tmp(temp_storage, cf_result, input_params)
+    do_cleanup_tmp(temp_storage, cf_result, input_params, settings)
+
+#@@
+        # if   output_format  and/or  output_datatype  has been set by the user -> translate resulting image(s)
+        # using gdal_translate API
+    if change_output is True:
+        cnv_output(cf_result, input_params, settings)
 
 
 
@@ -493,6 +588,8 @@ def main():
 # for performance testing
     print 'Full Processing Runtime in sec: ',  time.time() - startTime1, '\n'
 #    print '**** D O N E ****', '\n'
+
+
 
 
 #/************************************************************************/

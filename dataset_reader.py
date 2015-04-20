@@ -128,7 +128,7 @@ class Reader(object):
         """
             uses WCS requests to generate filelist of files available  at service/server
         """
-        cov_list = self.base_desccover(input_params, settings, mask=False)
+        cov_list = self.base_desceocover(input_params, settings, mask=False)
             # check if there is realy a list of datasets returned or an error msg
         if type(cov_list) is str:   # and cov_list.find('numberMatched="0"') is not -1:
             err_msg = '[Error] -- No Datasets found. Service returned the follwing information.'
@@ -137,7 +137,7 @@ class Reader(object):
             sys.exit()
 
         
-        mask_list = self.base_desccover(input_params, settings, mask=True)
+        mask_list = self.base_desceocover(input_params, settings, mask=True)
         if type(mask_list) is str:  # and cov_list.find('numberMatched="0"') is not -1:
             err_msg = '[Error] -- No Datasets found. Service returned the follwing information.'
             print err_msg
@@ -247,7 +247,7 @@ class Reader(object):
         return service1, toi_values, aoi_values, dss
 
 #---------
-    def base_desccover(self, input_params, settings, mask):
+    def base_desceocover(self, input_params, settings, mask):
         """
             Send a DescribeEOCoverageSet request to the WCS Service, asking for the available Coverages, according
             to the user defined AOI, TOI, and DatasetSeries. The function returns the available CoveragesIDs.
@@ -262,7 +262,7 @@ class Reader(object):
                    'subset_time': toi_values[0]+'T00:00'+','+ toi_values[1]+'T23:59' ,
                    'IDs_only': True }
                    
-                   
+           
         cids = wcs.DescribeEOCoverageSet(request)
         
         return cids   
@@ -419,7 +419,7 @@ class CF_cryoland_Reader(Reader):
         """
             uses WCS requests to generate filelist of files available  at service/server
         """
-        cov_list = self.base_desccover(input_params, settings, mask=False)
+        cov_list = self.base_desceocover(input_params, settings, mask=False)
 
         base_flist = []
         base_mask_flist = []
@@ -640,7 +640,7 @@ class CF_spot4take5_f_Reader(Reader):
             band subsetting) is currently implemented
             @@TODO - Option cpould also be:
                - Function copies the available coverages on the temp-location for processing
-               - and even: uses "gdal_tranlate" functionality, which enables data transformation 
+               - and even: uses "gdal_translate" functionality, which enables data transformation 
                  (subsetting, CRS, band subsetting, etc. )
         """
         pass
@@ -742,7 +742,7 @@ class CF_landsat5_m_Reader(Reader):
             band subsetting) is currently implemented
             @@TODO - Option cpould also be:
                - Function copies the available coverages on the temp-location for processing
-               - and even: uses "gdal_tranlate" functionality, which enables data transformation 
+               - and even: uses "gdal_translate" functionality, which enables data transformation 
                  (subsetting, CRS, band subsetting, etc. )
         """
         pass
