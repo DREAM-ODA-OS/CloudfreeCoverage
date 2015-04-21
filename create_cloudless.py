@@ -49,9 +49,9 @@ import wcs_client
 from get_config import get_config
 import tempfile
 import shutil
-from xml.dom import minidom
 from osgeo import gdal
 
+from util import  handle_error, set_logging, print_log, parse_xml
 
 
     # check for OS Platform and set the Directory-Separator to be used
@@ -151,67 +151,9 @@ def now():
 
 
 #/************************************************************************/
-#/*                               handle_error()                              */
-#/************************************************************************/
-
-def handle_error(err_msg, err_code):
-    """
-        prints out the error_msg and err_code and exit
-    """
-    #print err_msg, err_code
-    lmsg = err_msg, err_code
-    print_log(settings, lmsg)
-#    usage()
-    sys.exit(err_code)
-
-
-#/************************************************************************/
-#/*                           set_logging()                              */
-#/************************************************************************/
-def set_logging():
-    """
-        set logging output according to configuration -> either to the 
-        screen or to a files
-    """
-    global settings
-    if settings['logging.log_type'] == 'screen':
-        log_fsock = sys.stdout
-    if settings['logging.log_type'] == 'file':
-        if settings['logging.log_file'] is None or settings['logging.log_file'] is '':
-            err_msg = 'Error - there is no log-file location provided in the the config-file'
-            handle_error(err_msg, 10)
-        log_fsock = open(settings['logging.log_file'], 'a')
-            # also write the stderr to the logfile (in anycase)
-            # comment out next line if errors should go to screen and not to log-file
-        sys.stderr = log_fsock
-
-    
-    #return log_fsock
-    settings['logging.log_fsock'] = log_fsock
-
-
-#/************************************************************************/
-#/*                        print_log()                                   */
-#/************************************************************************/
-def print_log(settings, msg):
-    """
-        writes log-output 
-    """
-    print type(msg)
-    if msg.__class__ is str or msg.__class__ is unicode:
-       print >> settings['logging.log_fsock']  , msg
-    else:
-        for elem in msg: 
-            print >> settings['logging.log_fsock']  , "%s" % elem,
-    
-        print >> settings['logging.log_fsock'] ,''
-
-
-
-#/************************************************************************/
 #/*                               dss_info()                              */
 #/************************************************************************/
-def dss_info():
+def dss_info(settings):
     """
         provide listings of available DatasetSeries from all configured servers
         (from the configuration file)
@@ -220,7 +162,7 @@ def dss_info():
     serv_list = []
         # just grab the server info - strip off the rest
     for vv in settings.itervalues():
-        if vv.startswith('http'):
+        if vv.__class__ is str and  vv.startswith('http'):
             ss = vv.split('?')
             serv_list.append(ss[0]+'?')
 
@@ -234,30 +176,6 @@ def dss_info():
         print '-----------'
 
     sys.exit()
-
-#/************************************************************************/
-#/*                             parse_xml()                              */
-#/************************************************************************/
-
-def parse_xml(in_xml, tag):
-    """
-        Function to parse the request results (GetCapabilities & DescribeEOCoverageSet) for the available
-        DataSetSeries (EOIDs) and CoveragesIDs.
-    """
-
-        # parse the xml - received as answer to the request
-    xmldoc = minidom.parseString(in_xml)
-        # find all the tags (CoverageIds or DatasetSeriesIds)
-    tagid_node = xmldoc.getElementsByTagName(tag)
-        # number of found tags
-    n_elem = tagid_node.length
-    tag_ids = []
-        # store the found items
-    for n  in range(0, n_elem):
-        tag_ids.append(tagid_node[n].childNodes.item(0).data)
-
-        # return the found items
-    return tag_ids
 
 
 #/************************************************************************/
@@ -276,7 +194,7 @@ def list_available_dss(target_server, printit):
                'sections': 'DatasetSeriesSummary,ServiceIdentification', 
                'server_url': target_server }
                
-    getcap_xml = wcs.GetCapabilities(request)
+    getcap_xml = wcs.GetCapabilities(request, settings)
 
     if getcap_xml is not None:
         dss_ids = parse_xml(getcap_xml, xml_ID_tag[0])
@@ -407,7 +325,7 @@ def get_cmdline():
 
         elif opt in ("-i", "--info", "-info", "info"):
             print '==== You requested DatasetSeries information from all configured Servers ===='
-            dss_info()
+            dss_info(settings)
 
         elif opt in ("-d", "--dataset"):
             if arg is None or arg.startswith('-'):
@@ -536,13 +454,13 @@ def cnv_output(cf_result, input_params, settings):
 
 
 
-    res = os.system("gdal_translate " + tr_params + " " + input_params['output_dir'] + cf_result[0] + " " + input_params['output_dir'] + cf_result[0][:-4]+out_ext )
+    res = os.system("gdal_translate -q" + tr_params + " " + input_params['output_dir'] + cf_result[0] + " " + input_params['output_dir'] + cf_result[0][:-4]+out_ext )
     if res is 0: 
         os.remove(input_params['output_dir'] + cf_result[0])
     else:
         err_msg = '[Error] - CF_image could not be converted'
         handle_error(err_msg, res)
-    res = os.system("gdal_translate " + tr_params + " " + input_params['output_dir'] + cf_result[1] + " " + input_params['output_dir'] + cf_result[1][:-4]+out_ext )
+    res = os.system("gdal_translate -q" + tr_params + " " + input_params['output_dir'] + cf_result[1] + " " + input_params['output_dir'] + cf_result[1][:-4]+out_ext )
     if res is 0: 
         os.remove(input_params['output_dir'] + cf_result[1])
     else:
@@ -564,9 +482,8 @@ def main():
     settings = get_config(default_config_file)
     
         # set the logging output i.e. to a File or the screen
-    #log_fsock = set_logging(settings)
-    #set_logging(settings)
-    set_logging()
+    set_logging(settings)
+
 
         # get all parameters provided via cmd-line
     global input_params
@@ -635,9 +552,8 @@ def main():
         # copy results to output location and clean-up the temporary storage area
     do_cleanup_tmp(temp_storage, cf_result, input_params, settings)
 
-#@@
         # if   output_format  and/or  output_datatype  has been set by the user -> translate resulting image(s)
-        # using gdal_translate API
+        # using gdal_translate 
     if change_output is True:
         cnv_output(cf_result, input_params, settings)
 

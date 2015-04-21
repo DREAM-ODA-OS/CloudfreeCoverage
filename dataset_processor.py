@@ -50,12 +50,15 @@ from osgeo.gdalconst import *     # this allows leaving of gdal eg. at GA_ReadOn
 from osgeo.gdalnumeric import *
 import numpy as np
 
+from util import handle_error, print_log
+
 gdal.UseExceptions()
 
 global dsep
 dsep = os.sep
 
-from create_cloudless import handle_error
+
+
 
 
 #/************************************************************************/
@@ -241,21 +244,21 @@ class CFProcessor(object):
         for ifile, mfile in zip(base_flist_e, base_mask_flist_e):
             if os.path.exists(temp_storage+ifile) is False:
                 err_msg = '[Error] -- File does not exist: ', temp_storage+ifile
-                print  err_msg
+                print_log(settings, err_msg)
                 sys.exit(5)
             if os.path.exists(temp_storage+mfile) is False:
                 err_msg = '[Error] -- File does not exist: ', temp_storage+mfile
-                print  err_msg
+                print_log(settings, err_msg)
                 sys.exit(5)
 
         for gfile, gmfile in zip(gfp_flist_e, gfpmask_flist_e):
             if os.path.exists(temp_storage+gfile) is False:
                 err_msg = '[Error] -- File does not exist: ', temp_storage+gfile
-                print  err_msg
+                print_log(settings, err_msg)
                 sys.exit(5)
             if os.path.exists(temp_storage+gmfile) is False:
                 err_msg = '[Error] -- File does not exist: ', temp_storage+gmfile
-                print  err_msg
+                print_log(settings, err_msg)
                 sys.exit(5)
 
         cf_result = self.change_img(base_flist_e, base_mask_flist_e, gfp_flist_e, gfpmask_flist_e, input_params, temp_storage)
@@ -300,10 +303,12 @@ class CFProcessor(object):
         basemaskImg = self.fopen(infile_basemaskf)
 
         if baseImg is None:
-            print '[Error] -- Could not open: ', temp_storage+infile_basef
+            err_msg = '[Error] -- Could not open: ', temp_storage+infile_basef
+            print_log(settings, err_msg)
             sys.exit(6)
         if basemaskImg is None:
-            print '[Error] -- Could not open: ', temp_storage+infile_basemaskf
+            err_msg = '[Error] -- Could not open: ', temp_storage+infile_basemaskf
+            print_log(settings, err_msg)
             sys.exit(6)
 
         return baseImg, infile_basef, basemaskImg, infile_basemaskf
@@ -367,18 +372,21 @@ class CFProcessor(object):
             for gfpfile, gfpmaskfile, gfpfile_e, gfpmaskfile_e in zip(gfp_flist, gfpmask_flist, gfp_flist_e, gfpmask_flist_e):
                 startTime3 = time.time()
 
-                print 'Using GFP-'+str(img_cnt)+': ', gfpfile   #, type(gfpfile)
+                lmsg = 'Using GFP-'+str(img_cnt)+': ', gfpfile   #, type(gfpfile)
+                print_log(settings, lmsg)
 
                 f_read.base_getcover([gfpfile], input_params, settings, temp_storage, mask=False)                
                 f_read.base_getcover([gfpmaskfile], input_params, settings, temp_storage, mask=True)                
                 
-                print 'Using GFPMask-'+str(img_cnt)+': ', gfpmaskfile   #, type(gfpmaskfile)
+                lmsg = 'Using GFPMask-'+str(img_cnt)+': ', gfpmaskfile   #, type(gfpmaskfile)
+                print_log(settings, lmsg)
                 gfpImg, infile_gfpf, gfpmaskImg, infile_gfpmaskf = self.access_ds(gfpfile_e, gfpmaskfile_e, temp_storage)
                 gfpImgDim, gfpProj, gfpLocation = self.read_img(gfpImg, infile_gfpf)
                 gfpmaskDim, gfpmaskProj, gfpmaskLocation, gfpmaskImg, gfpmaskClouds = self.read_mask(gfpmaskImg, infile_gfpmaskf, isBaseImg=False)
 
                 res2 = np.ma.MaskedArray((eval_mask > 0) & (gfpmaskImg == 0))
-                print 'N_cloudpixel replaced: ', res2.sum()
+                lmsg = 'N_cloudpixel replaced: ', res2.sum()
+                print_log(settings, lmsg)
 
                 metamaskImg[res2] = img_cnt
                 eval_mask[res2] = 0
@@ -416,19 +424,23 @@ class CFProcessor(object):
                     out_data[i-1][res2] = gfpBand1[res2]
 
 
-                print 'Remaining masked pixels: ', np.count_nonzero(eval_mask)
+                lmsg = 'Remaining masked pixels: ', np.count_nonzero(eval_mask)
+                print_log(settings, lmsg)
 
                     # bail out if no more clouded picels are available
                 if eval_mask.sum() == 0:
-                    print 'All pixels masked as clouds have been replaced'
+                    lmsg = 'All pixels masked as clouds have been replaced'
+                    print_log(settings, lmsg)
                     break
 
                 img_cnt += 1
                 
-                print 'GFP Product processing time: ', time.time() - startTime3
+                lmsg = 'GFP Product processing time: ', time.time() - startTime3
+                print_log(settings, lmsg)
                 
 
-            print 'Writing CloudFree product...'
+            lmsg = 'Writing CloudFree product...'
+            print_log(settings, lmsg)
                     #write out all Bands into outFile
             for i in range(1, baseImgDim[2][0]+1, 1):
                 outBand = outImg.GetRasterBand(i)
@@ -446,7 +458,8 @@ class CFProcessor(object):
 # @@ for testing intermediary - uncomment the following line -- see also above
                 #outImg = None
 
-        print 'CloudFree processing - RUNTIME in sec: ',  time.time() - startTime2
+        lmsg = 'CloudFree processing - RUNTIME in sec: ',  time.time() - startTime2
+        print_log(settings, lmsg)
 
         cf_result = [outFile[1], metamaskTIF, metamaskTXT]
 
@@ -518,12 +531,15 @@ class CF_cryoland_Processor(CFProcessor):
         outImg = np.array(base_img)
 
         num_clouds = size(np.array(np.where(outImg == cloud_val)))
-        print 'Pixels masked as clouds: ', num_clouds
+        lmsg = 'Pixels masked as clouds: ', num_clouds
+        print_log(settings, lmsg)
+        
         out_clouds = 0
         cnt = 1
         
         for gfp_file in gfp_flist:
-            print 'Using GFP-'+str(cnt)+': ', gfp_file 
+            lmsg ='Using GFP-'+str(cnt)+': ', gfp_file 
+            print_log(settings, lmsg)
 
             gfp_file1 = [gfp_file]
 
@@ -539,13 +555,17 @@ class CF_cryoland_Processor(CFProcessor):
             out_metamask_txt.flush()
             
             cnt += 1
-            print 'N_cloudpixel replace: ', num_clouds - out_clouds
-            print 'Remaining masked pixels: ', out_clouds
+            lmsg = 'N_cloudpixel replace: ', num_clouds - out_clouds
+            print_log(settings, lmsg)
+            lmsg = 'Remaining masked pixels: ', out_clouds
+            print_log(settings, lmsg)
+            
             num_clouds = out_clouds
             
                 # if there are no more clouded pixels - stop processing
             if (out_clouds == 0):
-                print 'All pixels masked as clouds have been replaced'
+                lmsg = 'All pixels masked as clouds have been replaced'
+                print_log(settings, lmsg)
                 break
 
            # now create the cloudfree output products file

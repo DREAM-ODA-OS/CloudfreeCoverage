@@ -76,7 +76,7 @@ import time, datetime
 import urllib2, socket
 from xml.dom import minidom
 
-
+from util import print_log
 
 
 
@@ -164,7 +164,7 @@ class wcsClient(object):
         # default timeout for all sockets (in case a requests hangs)
     _timeout = 180
     socket.setdefaulttimeout(_timeout)
-
+    
         # XML search tags for the request responses
     _xml_ID_tag = ['wcseo:DatasetSeriesId', 'wcs:CoverageId']
    # _xml_date_tag = ['gml:beginPosition',  'gml:endPosition']
@@ -332,7 +332,7 @@ class wcsClient(object):
     #/************************************************************************/
     #/*                           GetCapabilities()                          */
     #/************************************************************************/
-    def GetCapabilities(self, input_params):
+    def GetCapabilities(self, input_params, settings):
         """
             Creates a GetCapabilitiy request url based on the input_parameters
             and executes the request.
@@ -371,7 +371,7 @@ class wcsClient(object):
     #/************************************************************************/
     #/*                           DescribeCoverage()                         */
     #/************************************************************************/
-    def DescribeCoverage(self, input_params):
+    def DescribeCoverage(self, input_params, settings):
         """
             Creates a DescribeCoverage request url based on the input_parameters
             and executes the request.
@@ -401,7 +401,7 @@ class wcsClient(object):
     #/************************************************************************/
     #/*                          DescribeEOCoverageSet()                     */
     #/************************************************************************/
-    def DescribeEOCoverageSet(self, input_params):
+    def DescribeEOCoverageSet(self, input_params, settings):
         """
             Creates a DescribeEOCoverageSet request url based on the input_parameters
             and executes the request.
@@ -457,7 +457,7 @@ class wcsClient(object):
     #/*                              GetCoverage()                           */
     #/************************************************************************/
 
-    def GetCoverage(self, input_params):
+    def GetCoverage(self, input_params, settings):
         """
             Creates a GetCoverage request url based on the input_parameters
             and executes the request.
@@ -612,15 +612,18 @@ class wcsClient(object):
 
         except urllib2.URLError, url_ERROR:
             if hasattr(url_ERROR, 'reason'):
-                print '\n', time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  Server not accessible -", url_ERROR.reason
+                err_msg = '\n', time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  Server not accessible -", url_ERROR.reason
+                print_log(settings, err_msg)
                 
                 try:
-                    print url_ERROR.read(), '\n'
+                    err_msg = url_ERROR.read(), '\n'
+                    print_log(settings, err_msg)
                 except:
                     pass
 
             elif hasattr(url_ERROR, 'code'):
-                print time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  The server couldn\'t fulfill the request - Code returned:  ", url_ERROR.code, url_ERROR.read()
+                lmsg = time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  The server couldn\'t fulfill the request - Code returned:  ", url_ERROR.code, url_ERROR.read()
+                print_log(settings, lmsg)
                 err_msg = str(url_ERROR.code)+'--'+url_ERROR.read()
                 return err_msg
 
@@ -679,15 +682,18 @@ class wcsClient(object):
                 return status
 
             except IOError as (errno, strerror):
-                print "I/O error({0}): {1}".format(errno, strerror)
+                err_msg = "I/O error({0}): {1}".format(errno, strerror)
+                print_log(settings, err_msg)
             except:
-                print "Unexpected error:", sys.exc_info()[0]
+                err_msg = "Unexpected error:", sys.exc_info()[0]
+                print_log(settings, err_msg)
                 raise
 
 
         except urllib2.URLError as url_ERROR:
             if hasattr(url_ERROR, 'reason'):
-                print '\n', time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  Server not accessible -", url_ERROR.reason
+                err_msg = '\n', time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  Server not accessible -", url_ERROR.reason
+                print_log(settings, err_msg)
                     # write out the servers return msg
                 errfile = outfile.rpartition(dsep)[0]+dsep+'access_error'+now+'.xml'
                 access_err = open(errfile, 'w+b')
@@ -695,7 +701,8 @@ class wcsClient(object):
                 access_err.flush()
                 access_err.close()
             elif hasattr(url_ERROR, 'code'):
-                print time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  The server couldn\'t fulfill the request - Code returned:  ", url_ERROR.code, url_ERROR.read()
+                lmsg = time.strftime("%Y-%m-%dT%H:%M:%S%Z"), "- ERROR:  The server couldn\'t fulfill the request - Code returned:  ", url_ERROR.code, url_ERROR.read()
+                print_log(settings, lmsg)
                 err_msg = str(url_ERROR.code)+'--'+url_ERROR.read()
                 return err_msg
         except TypeError:
@@ -714,8 +721,7 @@ class wcsClient(object):
         """
         request_dict = {}
         for k, v in input_params.iteritems():
-           # print k,' -- ',v
-                # skip all keay with None or True values
+                # skip all keys with None or True values
             if v == None or v == True:
                 continue
 

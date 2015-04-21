@@ -59,11 +59,10 @@ import time
 import fnmatch
 import datetime
 
-from create_cloudless import parse_xml
+from util import parse_xml, print_log
 
 import wcs_client
 wcs = wcs_client.wcsClient()
-
 
 
 
@@ -132,16 +131,16 @@ class Reader(object):
             # check if there is realy a list of datasets returned or an error msg
         if type(cov_list) is str:   # and cov_list.find('numberMatched="0"') is not -1:
             err_msg = '[Error] -- No Datasets found. Service returned the follwing information.'
-            print err_msg
-            print cov_list
+            print_log(settings, err_msg)
+            print_log(settings, cov_list)
             sys.exit()
 
         
         mask_list = self.base_desceocover(input_params, settings, mask=True)
         if type(mask_list) is str:  # and cov_list.find('numberMatched="0"') is not -1:
             err_msg = '[Error] -- No Datasets found. Service returned the follwing information.'
-            print err_msg
-            print cov_list
+            print_log(settings, err_msg)
+            print_log(settings, cov_list)
             sys.exit()
 
         
@@ -177,11 +176,11 @@ class Reader(object):
 
         if len(base_flist) != len(base_mask_flist):
             err_msg = 'Number of datafiles and number of cloud-masks do not correspond'
-            print err_msg
+            print_log(settings, err_msg)
             sys.exit(4)
         if len(gfp_flist) != len(gfpmask_flist):
             err_msg = 'Number of datafiles and number of cloud-masks do not correspond'
-            print err_msg
+            print_log(settings, err_msg)
             sys.exit(4)
 
 
@@ -263,7 +262,7 @@ class Reader(object):
                    'IDs_only': True }
                    
            
-        cids = wcs.DescribeEOCoverageSet(request)
+        cids = wcs.DescribeEOCoverageSet(request, settings)
         
         return cids   
 
@@ -322,7 +321,7 @@ class Reader(object):
             return out_gfp, out_gfpm
 
         else:
-            print '[Error] -- Choosen Scenario is not supported. Please use either T, B or M -- '
+            print_log(settings, '[Error] -- Choosen Scenario is not supported. Please use either T, B or M -- ')
             sys.exit(3)
 
 #---------
@@ -364,10 +363,10 @@ class Reader(object):
 
         for COVERAGEID in file_list:
             request['coverageID'] = COVERAGEID
-            res_getcov = wcs.GetCoverage(request)
+            res_getcov = wcs.GetCoverage(request, settings)
 
             if res_getcov is not 200:
-                print res_getcov
+                print_log(settings, res_getcov)
 
 
 #/************************************************************************/
@@ -439,7 +438,7 @@ class CF_cryoland_Reader(Reader):
                 cnt += 1
 
             except ValueError:
-                print str(ValueError)
+                print_log(settings, str(ValueError))
 
 
         gfp_flist = list(cov_list)
@@ -638,10 +637,6 @@ class CF_spot4take5_f_Reader(Reader):
             Processing takes place on the original data (skipping copying, but 
             maybe risking data cuorruption ?), no data transformation (subsetting, CRS, 
             band subsetting) is currently implemented
-            @@TODO - Option cpould also be:
-               - Function copies the available coverages on the temp-location for processing
-               - and even: uses "gdal_translate" functionality, which enables data transformation 
-                 (subsetting, CRS, band subsetting, etc. )
         """
         pass
 
@@ -740,10 +735,6 @@ class CF_landsat5_m_Reader(Reader):
             Processing takes place on the original data (skipping copying, but 
             maybe risking data cuorruption ?), no data transformation (subsetting, CRS, 
             band subsetting) is currently implemented
-            @@TODO - Option cpould also be:
-               - Function copies the available coverages on the temp-location for processing
-               - and even: uses "gdal_translate" functionality, which enables data transformation 
-                 (subsetting, CRS, band subsetting, etc. )
         """
         pass
 
