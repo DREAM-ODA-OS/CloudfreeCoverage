@@ -67,6 +67,7 @@ default_config_file =  os.path.abspath('.')+dsep+"conf"+dsep+"cloudless_config.c
     # XML search tags for the request responses
 xml_ID_tag = ['wcseo:DatasetSeriesId', 'wcs:CoverageId' ]
 xml_date_tag = ['gml:beginPosition',  'gml:endPosition']
+xml_bbox_tag = ['ows:LowerCorner', 'ows:UpperCorner']
 
     # create a wcsClient instance to be used
 global wcs
@@ -200,7 +201,8 @@ def list_available_dss(target_server, printit):
         dss_ids = parse_xml(getcap_xml, xml_ID_tag[0])
         dss_date1 = parse_xml(getcap_xml, xml_date_tag[0])
         dss_date2 = parse_xml(getcap_xml, xml_date_tag[1])
-
+        dss_ll = parse_xml(getcap_xml, xml_bbox_tag[0])
+        dss_ur = parse_xml(getcap_xml, xml_bbox_tag[1])
         
     else:
         err_msg = 'Server not responding -- Skipping...'
@@ -210,11 +212,11 @@ def list_available_dss(target_server, printit):
 
     if printit is True:
             # prints the available DatasetSeriesIds and theri Coverage time-ranges to the screen
-        print "The following DatasetSeries [Name: From-To] are available:"
+        print "The following DatasetSeries [Name: From-To / LL-UR BBox] are available from: \t", request['server_url']
         for i in range(len(dss_ids)):
-            print " - ", dss_ids[i] , ": \t", dss_date1[i], " - ", dss_date2[i]
-
-
+            #print " - ", dss_ids[i] , ": \t", dss_date1[i], " - ", dss_date2[i], '\n \t \t \t',  dss_ll[i], " - ", dss_ur[i]
+            print " - ", dss_ids[i] , ': \n \t \t \t', dss_date1[i], " - ", dss_date2[i], '\n \t \t \t',  dss_ll[i], " - ", dss_ur[i]
+    
 
 #/************************************************************************/
 #/*                              do_cleanup()                            */
