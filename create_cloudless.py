@@ -124,8 +124,7 @@ def usage():
     print "                                  - for listing use:   ./create_cloudless.py  --help_formats "
     print "   -y|--output_datatype      --  the datatype of the desired output [default = same as input];  Valids are:  Byte/Int16/ "
     print "                                 UInt16/UInt32/Int32/Float32/Float64/CInt16/CInt32/CFloat32/CFloat64 "
-# TODO: @@ - maybe we also should consider a WCS-server address as an input recieved from the WPS-server
-#    print "   -e|--extract  <FULL|SUB>  --  work on an extracted subset or use all datsets, as  full files, touched by the AOI"
+    print "   -e|--extract  <SUB|FULL>  --  work on an extracted subset (AOI) or use datsets as full files [default=SUB]"
     print " "
     print " "
     print "Example: ./create_cloudless.py -d landsat5_2a -a 3.5,3.6,43.3,43.4 -t 20110513 -s T -b 3,2,1 -p 90 -o ./out "
@@ -404,7 +403,7 @@ def get_cmdline():
     if input_params['output_crs'] is None:    input_params['output_crs'] = settings['general.def_output_crs']
     if input_params['output_datatype'] is None:    input_params['output_datatype'] = str.lower(settings['general.def_output_datatype'])
     if input_params['output_format'] is None:    input_params['output_format'] = str.upper(settings['general.def_output_format'])
-    if input_params['extract'] is None:    input_params['extract'] = str.lower(settings['general.def_extract'])
+    if input_params['extract'] is None:    input_params['extract'] = str.upper(settings['general.def_extract'])
 
         # check that all required parameters are supplied
     if input_params['dataset'] is None: 
@@ -420,6 +419,7 @@ def get_cmdline():
         print "\n[Error] -- '-o <output_directory>' is a required input parameter"
         usage()
     
+
     return input_params
 
 #/************************************************************************/
@@ -490,7 +490,7 @@ def main():
         # get all parameters provided via cmd-line
     global input_params
     input_params = get_cmdline()
-
+    
 
         # now that we know what dataset we need and where to find them, select the
         # correct reader for the requested dataset

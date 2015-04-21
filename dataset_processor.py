@@ -350,7 +350,8 @@ class CFProcessor(object):
 
 
 # @@ testing intermediary -> comment out the following line  --> see also below
-            outImg = driver.Create((outFile[0]+dsep+outFile[1]), baseImgDim[0][0], baseImgDim[1][0], baseImgDim[2][0], gDType)
+            #outImg = driver.Create((outFile[0]+dsep+outFile[1]), baseImgDim[0][0], baseImgDim[1][0], baseImgDim[2][0], gDType)
+            outImg = driver.Create((outFile[0]+dsep+outFile[1]), baseImgDim[0][0], baseImgDim[1][0], baseImgDim[2][0], gDType, [ 'TILED=YES', 'COMPRESS=DEFLATE' ] )
             
                 # metadata mask & txt-file for storing the info about used (combined) datasets
             cur_ext = os.path.splitext(outFile[1])[1]

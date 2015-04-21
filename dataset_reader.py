@@ -363,7 +363,7 @@ class Reader(object):
 
         for COVERAGEID in file_list:
             request['coverageID'] = COVERAGEID
-            res_getcov = wcs.GetCoverage(request, settings)
+            res_getcov = wcs.GetCoverage(request, settings, input_params)
 
             if res_getcov is not 200:
                 print_log(settings, res_getcov)

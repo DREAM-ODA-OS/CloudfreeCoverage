@@ -329,10 +329,11 @@ class wcsClient(object):
         return getcov_dict
 
 
+
     #/************************************************************************/
     #/*                           GetCapabilities()                          */
     #/************************************************************************/
-    def GetCapabilities(self, input_params, settings):
+    def GetCapabilities(self, request_params, settings):
         """
             Creates a GetCapabilitiy request url based on the input_parameters
             and executes the request.
@@ -348,19 +349,19 @@ class wcsClient(object):
                         possible sections: [ DatasetSeriesSummary, CoverageSummary, Content,
                         ServiceIdentification, ServiceProvider, OperationsMetadata, Languages, All ]
             Example:
-                input_params= {'request': 'GetCapabilities',
+                request_params = {'request': 'GetCapabilities',
                                'server_url': 'http://some.where.org/ows?' ,
                                'updateSequence': '2007-04-05',
                                'sections' : 'CoverageSummary' }
             Returns:  XML GetCapabilities resonse
         """
         
-        if input_params.has_key('updateSequence') and input_params['updateSequence'] is not None:
-            res_in = self._valid_time_wrapper(list(input_params.get('updateSequence').split(',')))
-            input_params['updateSequence'] = ','.join(res_in)
+        if request_params.has_key('updateSequence') and request_params['updateSequence'] is not None:
+            res_in = self._valid_time_wrapper(list(request_params.get('updateSequence').split(',')))
+            request_params['updateSequence'] = ','.join(res_in)
 
         procedure_dict = self._set_base_cap()
-        http_request = self._create_request(input_params, procedure_dict)
+        http_request = self._create_request(request_params, procedure_dict)
 
         # print http_request   #@@
         result_xml = wcsClient._execute_xml_request(self, http_request)
@@ -371,7 +372,7 @@ class wcsClient(object):
     #/************************************************************************/
     #/*                           DescribeCoverage()                         */
     #/************************************************************************/
-    def DescribeCoverage(self, input_params, settings):
+    def DescribeCoverage(self, request_params, settings):
         """
             Creates a DescribeCoverage request url based on the input_parameters
             and executes the request.
@@ -384,13 +385,13 @@ class wcsClient(object):
                 Optional prameters:
                     None
             Example:
-                input_params={'request': 'DescribeEOCoverageSet',
+                request_params = {'request': 'DescribeEOCoverageSet',
                                'server_url': 'http://some.where.org/ows?' ,
                                'coverageid': 'some_Coverage_ID_yxyxyx_yxyxyx' }
             Returns:   XML DescribeCoverage response
         """
         procedure_dict = self._set_base_desccov()
-        http_request = self._create_request(input_params, procedure_dict)
+        http_request = self._create_request(request_params, procedure_dict)
        
         # print http_request   #@@        
         result_xml = wcsClient._execute_xml_request(self, http_request)
@@ -401,7 +402,7 @@ class wcsClient(object):
     #/************************************************************************/
     #/*                          DescribeEOCoverageSet()                     */
     #/************************************************************************/
-    def DescribeEOCoverageSet(self, input_params, settings):
+    def DescribeEOCoverageSet(self, request_params, settings):
         """
             Creates a DescribeEOCoverageSet request url based on the input_parameters
             and executes the request.
@@ -428,7 +429,7 @@ class wcsClient(object):
                     IDs_only:     Will provide only a listing of the available CoverageIDs;
                                   intended to feed results directly to a GetCoverage request loop [ True | False ]
             Example:
-                input_params={'request': 'DescribeEOCoverageSet',
+                request_params = {'request': 'DescribeEOCoverageSet',
                               'server_url': 'http://some.where.org/ows?' ,
                               'eoID':  'some_ID_of_coverage_or_datasetseries_or_stitchedmosaic' ,
                               'subset_lon': '-2.7,-2.6' ,
@@ -438,14 +439,14 @@ class wcsClient(object):
             Returns:    XML DescribeEOCoverageSet response  or  only a list of available coverageIDs
         """
             # validate that the provided date/time stings are in ISO8601
-        res_in = self._valid_time_wrapper(list(input_params.get('subset_time').split(',')))
-        input_params['subset_time'] = ','.join(res_in)
+        res_in = self._valid_time_wrapper(list(request_params.get('subset_time').split(',')))
+        request_params['subset_time'] = ','.join(res_in)
 
         procedure_dict = self._set_base_desceocoverageset()
-        http_request = self._create_request(input_params, procedure_dict)
+        http_request = self._create_request(request_params, procedure_dict)
       
         # print http_request   #@@        
-        if input_params.has_key('IDs_only') and input_params['IDs_only'] == True:
+        if request_params.has_key('IDs_only') and request_params['IDs_only'] == True:
             result_list = wcsClient._execute_xml_request(self, http_request, IDs_only=True)
         else:
             result_list = wcsClient._execute_xml_request(self, http_request)
@@ -457,7 +458,7 @@ class wcsClient(object):
     #/*                              GetCoverage()                           */
     #/************************************************************************/
 
-    def GetCoverage(self, input_params, settings):
+    def GetCoverage(self, request_params, settings, input_params):
         """
             Creates a GetCoverage request url based on the input_parameters
             and executes the request.
@@ -503,7 +504,7 @@ class wcsClient(object):
                                  Syntax:  epsg:xxxx lat1,lon1,lat2,lon2, lat3,lon3,lat1,lon1
                                  e.g.  epsg:4326 42,10,43,12,39,13,38,9,42,10'
                 Example:        
-                    input_params = {'request': 'GetCoverage' , 
+                    request_params = {'request': 'GetCoverage' , 
                                   'server_url': 'http://some.where.org/ows?' , 
                                   'coverageID': 'some_Coverage_ID_yxyxyx_yxyxyx' , 
                                   'formtat': 'tif' ,
@@ -517,40 +518,39 @@ class wcsClient(object):
         """
             # provide the same functionality for input as for the cmd-line
             # (to get around the url-notation for input)
-        if input_params['subset_x'].startswith('epsg'):
-            crs = input_params['subset_x'].split(':')[1].split(' ')[0]
-            label = input_params['subset_x'].split(':')[1].split(' ')[1]
-            coord = input_params['subset_x'].split(':')[1].split(' ')[2]
+        if request_params['subset_x'].startswith('epsg'):
+            crs = request_params['subset_x'].split(':')[1].split(' ')[0]
+            label = request_params['subset_x'].split(':')[1].split(' ')[1]
+            coord = request_params['subset_x'].split(':')[1].split(' ')[2]
             out = label+','+crs_url+crs+'('+coord
-            input_params['subset_x'] = out
-        elif input_params['subset_x'].startswith('pix') or input_params['subset_x'].startswith('ori'):
-            label = input_params['subset_x'].split(' ')[1]
-            coord = input_params['subset_x'].split(' ')[2]
+            request_params['subset_x'] = out
+        elif request_params['subset_x'].startswith('pix') or request_params['subset_x'].startswith('ori'):
+            label = request_params['subset_x'].split(' ')[1]
+            coord = request_params['subset_x'].split(' ')[2]
             out = label+'('+coord
-            input_params['subset_x'] = out
+            request_params['subset_x'] = out
         else:
             pass
 
-        if input_params['subset_y'].startswith('epsg'):
-            crs = input_params['subset_y'].split(':')[1].split(' ')[0]
-            label = input_params['subset_y'].split(':')[1].split(' ')[1]
-            coord = input_params['subset_y'].split(':')[1].split(' ')[2]
+        if request_params['subset_y'].startswith('epsg'):
+            crs = request_params['subset_y'].split(':')[1].split(' ')[0]
+            label = request_params['subset_y'].split(':')[1].split(' ')[1]
+            coord = request_params['subset_y'].split(':')[1].split(' ')[2]
             out = label+','+crs_url+crs+'('+coord
-            input_params['subset_y'] = out
-        elif input_params['subset_y'].startswith('pix') or input_params['subset_y'].startswith('ori'):
-            label = input_params['subset_y'].split(' ')[1]
-            coord = input_params['subset_y'].split(' ')[2]
+            request_params['subset_y'] = out
+        elif request_params['subset_y'].startswith('pix') or request_params['subset_y'].startswith('ori'):
+            label = request_params['subset_y'].split(' ')[1]
+            coord = request_params['subset_y'].split(' ')[2]
             out = label+'('+coord
-            input_params['subset_y'] = out
+            request_params['subset_y'] = out
         else:
             pass
 
 
         procedure_dict = self._set_base_getcov()
-        http_request = self._create_request(input_params, procedure_dict)
-       
-        # print http_request   #@@        
-        result = wcsClient._execute_getcov_request(self, http_request, input_params)
+        http_request = self._create_request(request_params, procedure_dict, input_params['extract'])
+      
+        result = wcsClient._execute_getcov_request(self, http_request, request_params)
 
         return result
 
@@ -634,7 +634,7 @@ class wcsClient(object):
     #/*                     _execute_getcov_request()                        */
     #/************************************************************************/
 
-    def _execute_getcov_request(self, http_request, input_params):
+    def _execute_getcov_request(self, http_request, request_params):
         """
             Executes the GetCoverage request based on the generated http_url and stores
             the receved/downloaded coverages in the defined  output location.
@@ -651,19 +651,19 @@ class wcsClient(object):
         global file_ext
         now = time.strftime('_%Y%m%dT%H%M%S')
        
-        if not input_params['coverageID'].endswith( ('tif','tiff','Tif','Tiff','TIFF','jpeg','jpg','png','gif','nc','hdf') ):
-            out_ext = file_ext.get( str(input_params['format'].lower()))
-            out_coverageID = input_params['coverageID']+'.'+out_ext
+        if not request_params['coverageID'].endswith( ('tif','tiff','Tif','Tiff','TIFF','jpeg','jpg','png','gif','nc','hdf') ):
+            out_ext = file_ext.get( str(request_params['format'].lower()))
+            out_coverageID = request_params['coverageID']+'.'+out_ext
         else:
-            out_coverageID = input_params['coverageID'] 
+            out_coverageID = request_params['coverageID'] 
 
-        if input_params['coverageID'].endswith( ('tiff','Tiff','TIFF','jpeg') ):
-            out_ext = file_ext.get( str(input_params['coverageID'][-4:].lower()))
-            out_coverageID = input_params['coverageID'][:-4]+out_ext
+        if request_params['coverageID'].endswith( ('tiff','Tiff','TIFF','jpeg') ):
+            out_ext = file_ext.get( str(request_params['coverageID'][-4:].lower()))
+            out_coverageID = request_params['coverageID'][:-4]+out_ext
 
             
-        if input_params.has_key('output') and input_params['output'] is not None:
-            outfile = input_params['output']+out_coverageID
+        if request_params.has_key('output') and request_params['output'] is not None:
+            outfile = request_params['output']+out_coverageID
         else:
             outfile = temp_storage+out_coverageID
 
@@ -714,13 +714,13 @@ class wcsClient(object):
     #/************************************************************************/
     #/*                              _merge_dicts()                           */
     #/************************************************************************/
-    def _merge_dicts(self, input_params, procedure_dict):
+    def _merge_dicts(self, request_params, procedure_dict):
         """
-            Merge and harmonize the input_params-dict with the required request-dict
+            Merge and harmonize the request_params-dict with the required request-dict
             e.g. the base_getcov-dict
         """
         request_dict = {}
-        for k, v in input_params.iteritems():
+        for k, v in request_params.iteritems():
                 # skip all keys with None or True values
             if v == None or v == True:
                 continue
@@ -741,12 +741,17 @@ class wcsClient(object):
     #/************************************************************************/
     #/*                               _create_request()                      */
     #/************************************************************************/
-    def _create_request(self, input_params, procedure_dict):
+    def _create_request(self, request_params, procedure_dict, extract=None):
         """
             Create the http-request according to the user selected Request-type
         """
-        request_dict = self._merge_dicts(input_params, procedure_dict)
+        request_dict = self._merge_dicts(request_params, procedure_dict)
+            # check for SUB or FULL scene extraction
+        if extract == 'FULL':
+            request_dict.pop('subset_x')
+            request_dict.pop('subset_y')
 
+        
             # this doesn't look nice, but this way I can control the order within the generated request
         http_request = ''
         if request_dict.has_key('server_url'):
