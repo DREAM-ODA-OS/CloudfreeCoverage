@@ -554,7 +554,7 @@ def main():
 # @@@@
         ## processing-limits (max. filenumber to be used) here # @@@
     if gfp_flist.__len__() > int(settings['general.def_maxfiles']):
-        err_msg = '[Error] -- ', now(), ' the number of GFP products availabel (=', str(gfp_flist.__len__()).strip(),') for the selected time period is larger then the configured "def_maxfiles" of: ', settings['general.def_maxfiles'], '\n', 'Please selecte a shorter time-period.'
+        err_msg = '[Error] -- ', now(), ' the number of GFP products availabel (=', str(gfp_flist.__len__()).strip(),') for the selected time period is larger then the configured "def_maxfiles" of: ', settings['general.def_maxfiles'], '\n', 'Please select a shorter time-period.'
         err_code = 4
         handle_error(err_msg, err_code, settings)
         
