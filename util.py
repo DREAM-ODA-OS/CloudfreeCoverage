@@ -51,13 +51,13 @@ from xml.dom import minidom
 #/*                               handle_error()                              */
 #/************************************************************************/
 
-def handle_error(err_msg, err_code):
+def handle_error(err_msg, err_code, settings):
     """
         prints out the error_msg and err_code and exit
     """
     #print err_msg, err_code
-    lmsg = err_msg, err_code
-    print_log(settings, lmsg)
+    err_msg = (err_code,) + err_msg
+    print_log(settings, err_msg)
 #    usage()
     sys.exit(err_code)
 

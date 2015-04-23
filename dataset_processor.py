@@ -515,7 +515,7 @@ class CF_cryoland_Processor(CFProcessor):
         inbase_img = self.fopen(temp_storage+base_flist[0])
         if inbase_img is None:
             err_msg = 'Could not open file: ', temp_storage+base_flist[0]
-            handle_error(err_msg, 4)
+            handle_error(err_msg, 4, settings)
 
         inbase_NumBands = inbase_img.RasterCount
         inbase_band = inbase_img.GetRasterBand(inbase_NumBands)

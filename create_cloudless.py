@@ -150,6 +150,35 @@ def now():
     return  time.strftime('[%Y%m%dT%H%M%S] - ')
 
 
+
+#/************************************************************************/
+#/*                         check_toiinput()                             */
+#/************************************************************************/
+def check_toiinput(settings, period_in):
+    """
+        check that the limit for TOI is considered, test for def_maxtoi
+    """        
+    if int(period_in) > int(settings['general.def_maxtoi']):
+        print '[Error] -- The chosen period is larger then the configured "def_maxtoi" of:  ', settings['general.def_maxtoi']
+        sys.exit()
+
+    
+#/************************************************************************/
+#/*                         check_aoiinput()                             */
+#/************************************************************************/
+def check_aoiinput(settings, aoi_in):
+    """
+        check that the limit for AOI is considered, test for def_maxaoi
+        the def_maxaoi represents one-side of a square (in degree) 
+    """
+    def_aoi = float(settings['general.def_maxaoi'])**2
+    aoi = (float(aoi_in[1])-float(aoi_in[0])) * (float(aoi_in[3])-float(aoi_in[2]))
+    #print aoi,  '-- ', def_aoi
+    if aoi > def_aoi:
+        print '[Error] -- The chosen AOI is larger then the configured "def_maxaoi" of:  ', settings['general.def_maxaoi'], '*', settings['general.def_maxaoi'], ' degrees.'
+        sys.exit()
+
+
 #/************************************************************************/
 #/*                               dss_info()                              */
 #/************************************************************************/
@@ -343,7 +372,8 @@ def get_cmdline():
                 input_params['aoi'] = arg.split(',')     # as minx, maxx, miny, maxy
                 if len(input_params['aoi']) != 4:
                     print "[Error] -- the aoi requires 4 parameters 'minx, maxx, miny, maxy'"
-
+                    usage()
+                
         elif opt in ("-t", "--time"):
             if arg is None or arg.startswith('-'):
                 print "[Error] -- the 'time' is a required input parameter"
@@ -374,7 +404,7 @@ def get_cmdline():
                 input_params['bands'] = arg.split(',')
             else:
                 err_msg = '[Error] -- supplied Band parameters cannot be handled: ', opt, arg
-                handle_error(err_msg, 2)
+                handle_error(err_msg, 2, settings)
 
         elif opt in ("-c","--crs"):
             input_params['output_crs'] = arg
@@ -394,6 +424,7 @@ def get_cmdline():
 
         else:
             print '[Error] -- ', now(), ' unknown option(s): ', opts
+
 
 
         # set the default values if optional parameters have not been supplied at the cmd-line
@@ -419,6 +450,13 @@ def get_cmdline():
         print "\n[Error] -- '-o <output_directory>' is a required input parameter"
         usage()
     
+        # check the limits for AOI and TOI are considered
+            # test for def_maxtoi
+    check_toiinput(settings, input_params['period'])
+    
+        # test for def_maxaoi
+    check_aoiinput(settings, input_params['aoi'])
+
 
     return input_params
 
@@ -461,13 +499,13 @@ def cnv_output(cf_result, input_params, settings):
         os.remove(input_params['output_dir'] + cf_result[0])
     else:
         err_msg = '[Error] - CF_image could not be converted'
-        handle_error(err_msg, res)
+        handle_error(err_msg, res, settings)
     res = os.system("gdal_translate -q" + tr_params + " " + input_params['output_dir'] + cf_result[1] + " " + input_params['output_dir'] + cf_result[1][:-4]+out_ext )
     if res is 0: 
         os.remove(input_params['output_dir'] + cf_result[1])
     else:
         err_msg = '[Error] - CF_mask could not be converted'
-        handle_error(err_msg, res)
+        handle_error(err_msg, res, settings)
 
 
 #/************************************************************************/
@@ -500,7 +538,7 @@ def main():
     else:
         err_msg = '[Error] -- ', now(), ' the requested dataset does not exist (is not configured)', input_params['dataset']
         err_code = 3
-        handle_error(err_msg, err_code)
+        handle_error(err_msg, err_code, settings)
 
 
         # call the reader module for the resepective dataset and process the data
@@ -513,6 +551,13 @@ def main():
         # gets a listing of available DatasetSeries and their corresponding time-range
     base_flist, base_mask_flist, gfp_flist, gfpmask_flist = f_read.get_filelist(input_params, settings)
 
+# @@@@
+        ## processing-limits (max. filenumber to be used) here # @@@
+    if gfp_flist.__len__() > int(settings['general.def_maxfiles']):
+        err_msg = '[Error] -- ', now(), ' the number of GFP products availabel (=', str(gfp_flist.__len__()).strip(),') for the selected time period is larger then the configured "def_maxfiles" of: ', settings['general.def_maxfiles'], '\n', 'Please selecte a shorter time-period.'
+        err_code = 4
+        handle_error(err_msg, err_code, settings)
+        
 
         # print the available input datasets:  eg. during testing 
     do_print_flist('BASE', base_flist)
